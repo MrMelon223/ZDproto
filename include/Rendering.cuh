@@ -2,6 +2,7 @@
 #define RENDERING_CUH
 
 #include "Helper.h"
+#include "Light.h"
 #include "Ray.h"
 
 __device__
@@ -16,6 +17,9 @@ void setup_rays(glm::vec3, glm::vec3, float, Ray*, glm::ivec2);
 
 __global__
 void capture_with_rays(glm::vec3, glm::vec3, float, d_ModelInstance*, uint32_t, Ray*, glm::ivec2, d_Model*);
+
+__global__
+void calculate_lighting(d_AmbientLight*, d_PointLight*, uint32_t, Ray*, glm::ivec2, glm::vec4*);
 
 __global__
 void texture_map(Ray*, glm::ivec2, glm::vec4*);

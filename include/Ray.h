@@ -9,6 +9,7 @@ struct Payload {
 	glm::vec3 intersection;
 	glm::vec4 color;
 	d_Model* model;
+	Tri* triangle;
 };
 
 struct Ray {

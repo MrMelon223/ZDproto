@@ -156,7 +156,7 @@ void Application::main_loop() {
 
 
 			// Render functions
-		this->camera->capture(this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), d_frame_buffer);
+		this->camera->capture(this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), this->level->get_d_ambient_light(), this->level->get_d_point_lights(), this->level->get_d_point_lights_size(), d_frame_buffer);
 
 		//this->camera->copy_to_frame_buffer(this->frame_buffer, 0);
 

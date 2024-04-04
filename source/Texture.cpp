@@ -25,15 +25,15 @@ Texture::Texture(std::string path) {
 		for (int x = 0; x < this->dims.x; x++) {
 			glm::vec4 cols(0.0f);
 			if (dims == 4) {
-				cols.x = static_cast<float>(ptr[y * 4 + x]) / 255;
-				cols.y = static_cast<float>(ptr[y * 4 + x + 1]) / 255;
-				cols.z = static_cast<float>(ptr[y * 4 + x + 2]) / 255;
-				cols.w = static_cast<float>(ptr[y * 4 + x + 3]) / 255;
+				cols.x = static_cast<float>(ptr[y * 4 + (x * dims)]) / 255;
+				cols.y = static_cast<float>(ptr[y * 4 + (x * dims) + 1]) / 255;
+				cols.z = static_cast<float>(ptr[y * 4 + (x * dims) + 2]) / 255;
+				cols.w = static_cast<float>(ptr[y * 4 + (x * dims) + 3]) / 255;
 			}
 			else if (dims <= 3) {
-				cols.x = static_cast<float>(ptr[y * 4 + x]) / 255;
-				cols.y = static_cast<float>(ptr[y * 4 + x + 1]) / 255;
-				cols.z = static_cast<float>(ptr[y * 4 + x + 2]) / 255;
+				cols.x = static_cast<float>(ptr[y * 4 + (x * dims)]) / 255;
+				cols.y = static_cast<float>(ptr[y * 4 + (x * dims) + 1]) / 255;
+				cols.z = static_cast<float>(ptr[y * 4 + (x * dims) + 2]) / 255;
 				cols.w = 1.0f;
 			}
 			this->data.push_back(cols);

@@ -19,14 +19,15 @@ glm::vec4 sample_texture(glm::vec4* texture, glm::ivec2 dims, float x, float y) 
 	return glm::vec4(0.0f);
 }
 
-void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, glm::vec4* buffer) {
+void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, d_AmbientLight* amb_light, d_PointLight* point_lights, uint32_t point_lights_size, glm::vec4* buffer) {
 	setup_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, this->d_ray_matrix[0], this->dims);
 	for (uint8_t i = 0; i < MAX_BOUNCE_COUNT; i++) {
 		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
 		cudaDeviceSynchronize();
 	}
 
-	texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
+	//texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
+	calculate_lighting << < (this->dims.y * this->dims.x) / 128, 128 >> > (amb_light, point_lights, point_lights_size, this->d_ray_matrix[0], this->dims, buffer);
 	cudaDeviceSynchronize();
 }
 
@@ -89,10 +90,11 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 
 				glm::vec2 intersection;
 				float d;
-				bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, vs[t->a].position + offset, vs[t->b].position + offset, vs[t->c].position + offset, intersection, d);
+				glm::vec2 uv;
+				bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, vs[t->a].position + offset, vs[t->b].position + offset, vs[t->c].position + offset, uv, d);
 				if (intersection_detection) {
 					glm::vec3 intersect = (d * direction) + position;
-					float tr = d;// (intersect - position).length();
+					float tr = d;//(intersect - position).length();
 					if (tr < last_leng) {
 						//printf("Intersection true!\n");
 
@@ -104,7 +106,9 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 						glm::vec4 fin_color = interpolateColor3D(vs[t->a].color, vs[t->b].color, vs[t->c].color, bayo_coord.x, bayo_coord.y, bayo_coord.z);
 						//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
 
-						glm::vec2 uv = bayo_coord.x * vs[t->a].uv + bayo_coord.y * vs[t->b].uv + bayo_coord.z * vs[t->c].uv;
+						//uv = bayo_coord.x * vs[t->a].uv + bayo_coord.y * vs[t->b].uv + bayo_coord.z * vs[t->c].uv;
+
+						//uv /= 10.0f;
 
 						uv = glm::clamp(uv, 0.0f, 1.0f);
 
@@ -114,6 +118,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 						ray->payload.uv = uv;
 						ray->intersected = true;
 						ray->payload.model = &models[g->model_index - 1];
+						ray->payload.triangle = t;
 						intersected = true;
 						last_leng = tr;
 					}
@@ -126,6 +131,46 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 			ray->payload.color = glm::vec4(0.1f, 0.5f, 1.0f, 1.0f);
 			ray->intersected = false;
 		}
+	}
+}
+
+__global__
+void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t lights_size, Ray* rays, glm::ivec2 dims, glm::vec4* out) {
+	int j = blockDim.y * blockIdx.y + threadIdx.y,
+		i = blockDim.x * blockIdx.x + threadIdx.x,
+		x = (j * 128 + i) % dims.x,
+		y = ((j * 128 + i) - x) / dims.x;
+	uint32_t idx = y * dims.x + x;
+
+	Ray* ray = &rays[idx];
+	if (ray->intersected) {
+		glm::vec4 diffuse_color = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
+
+		glm::vec4 lighting = glm::vec4(0.0f);
+		bool lit = false;
+
+		for (int l = 0; l < lights_size; l++) {
+			glm::vec3 diff = ray->payload.intersection - lights[l].position;
+			float dist = diff.length();
+
+			float intensity_val = (1.0f / (dist * dist * lights[l].falloff_distance)) * lights[l].intensity;
+			if (intensity_val > 0.0f && dist <= lights[l].range) {
+				float m = glm::dot(ray->payload.triangle->normal, diff);
+				if (m > 0.0f) {
+					lighting += glm::vec4(intensity_val * lights[l].diffuse_color * m);
+				}
+				else {
+				}
+				lit = true;
+			}
+			/*else {
+				buff[y * dims.x + x] += glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+			}*/
+		}
+
+		out[idx] = diffuse_color + lighting;
+	}
+	else {
 	}
 }
 

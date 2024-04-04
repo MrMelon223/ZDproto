@@ -57,6 +57,34 @@ void Level::load_from(std::string path) {
 		this->model_instances.push_back(create_instance(model_count, position, rotation, h_model->get_triangle_count()));
 	}
 
+	size_t light_leng;
+	parse >> light_leng;
+	std::vector<d_PointLight> point_lights;
+	for (size_t i = 0; i < leng; i++) {
+		std::getline(in, line);
+		std::istringstream in(line);
+
+		float x, y, z, r, g, b, a, s_r, s_g, s_b, s_a, intensity, falloff, range;
+
+		in >> x >> y >> z >> r >> g >> b >> a >> s_r >> s_g >> s_b >> s_a >> intensity >> falloff >> range;
+		//std::cout << model << std::endl;
+
+		glm::vec3 position = glm::vec3(x, y, z);
+		glm::vec4 color = glm::vec4(r, g, b, a);
+		glm::vec4 s_color = glm::vec4(s_r, s_g, s_b, s_a);
+
+		point_lights.push_back(d_PointLight{ position, color,s_color, intensity, falloff, range });
+	}
+
+	std::getline(in, line);
+	std::istringstream in2(line);
+
+	float r, g, b, a, s_r, s_g, s_b, s_a;
+
+	in2 >> r >> g >> b >> a >> s_r >> s_g >> s_b >> s_a;
+
+	d_AmbientLight amb_light = { glm::vec4(r, g, b, a), glm::vec4(s_r, s_g, s_b, s_a) };
+
 	this->d_model_instance_count = static_cast<uint32_t>(this->model_instances.size());
 
 	error_check(cudaMalloc((void**)&this->d_model_instances, sizeof(d_ModelInstance) * this->model_instances.size()));
@@ -64,7 +92,15 @@ void Level::load_from(std::string path) {
 
 	error_check(cudaMalloc((void**)&this->d_DEVICE_MODELS, sizeof(d_Model) * d_models.size()));
 	error_check(cudaMemcpy(this->d_DEVICE_MODELS, d_models.data(), sizeof(d_Model) * d_models.size(), cudaMemcpyHostToDevice));
+
+	error_check(cudaMalloc((void**)&this->d_ambient_light, sizeof(d_AmbientLight)));
+	error_check(cudaMemcpy(this->d_ambient_light, &amb_light, sizeof(d_AmbientLight), cudaMemcpyHostToDevice));
+
+	error_check(cudaMalloc((void**)&this->d_point_lights, sizeof(d_PointLight) * point_lights.size()));
+	error_check(cudaMemcpy(this->d_point_lights, point_lights.data(), sizeof(d_PointLight) * point_lights.size(), cudaMemcpyHostToDevice));
 	cudaDeviceSynchronize();
+
+	this->d_point_lights_count = static_cast<uint32_t>(point_lights.size());
 }
 
 Level::Level() {

@@ -137,6 +137,7 @@
     <ClInclude Include="include\Camera.h" />
     <ClInclude Include="include\Helper.h" />
     <ClInclude Include="include\Level.h" />
+    <ClInclude Include="include\Light.h" />
     <ClInclude Include="include\Model.h" />
     <ClInclude Include="include\Primitives.h" />
     <ClInclude Include="include\Ray.h" />
