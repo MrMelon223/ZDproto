@@ -81,7 +81,7 @@ void HostModel::load_from(std::string path) {
 
 		this->triangles.push_back(Tri{ x, y, z, glm::cross(this->vertices.at(x).position - this->vertices.at(y).position, this->vertices.at(x).position - this->vertices.at(z).position) });
 	}
-	this->color_map = Texture("resources/textures/default.png");
+	this->color_map = Texture("resources/textures/test.png");
 }
 
 HostModel::HostModel() {

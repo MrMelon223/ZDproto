@@ -31,8 +31,8 @@ void Camera::debug_show_render_data() {
 void Camera::add_to_euler_direction(glm::vec2 rot) {
 	float x = rot.x, y = rot.y;
 	printf("X,Y input mouse coord = {%.2f, %.2f}\n", rot.x, rot.y);
-	float normalized_coord_x = ((rot.x - (static_cast<float>(this->dims.x* 0.5f))) / static_cast<float>(this->dims.x));
-	float normalized_coord_y = ((rot.y - (static_cast<float>(this->dims.y *0.5f))) / static_cast<float>(this->dims.y));
+	float normalized_coord_x = ((rot.x - (static_cast<float>(this->dims.x) * 0.5f)) / static_cast<float>(this->dims.x));
+	float normalized_coord_y = ((rot.y - (static_cast<float>(this->dims.y) * 0.5f)) / static_cast<float>(this->dims.y));
 	printf("X,Y normalized input mouse coord = {%.2f, %.2f}\n", normalized_coord_x, normalized_coord_y);
 
 	float aspect_ratio = static_cast<float>(this->dims.x) / static_cast<float>(this->dims.y);

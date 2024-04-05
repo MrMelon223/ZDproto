@@ -39,7 +39,7 @@ Application::Application(int32_t dimx, int32_t dimy) {
 	glm::vec3 init_position = glm::vec3(1.0f, 0.0f, 0.0f);
 	glm::vec3 init_direction = glm::vec3(0.0f, 90.0f, 0.0f);
 
-	this->camera = new Camera(glm::ivec2(1280, 720), 120.0f, init_position, init_direction);
+	this->camera = new Camera(this->dims, 120.0f, init_position, init_direction);
 
 	this->level = new Level("resources/levels/test_level.txt");
 

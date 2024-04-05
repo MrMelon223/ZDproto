@@ -58,7 +58,10 @@ void Level::load_from(std::string path) {
 	}
 
 	size_t light_leng;
-	parse >> light_leng;
+	std::string line2;
+	std::getline(in, line2);
+	std::istringstream parse2(line2);
+	parse2 >> light_leng;
 	std::vector<d_PointLight> point_lights;
 	for (size_t i = 0; i < leng; i++) {
 		std::getline(in, line);
@@ -73,17 +76,17 @@ void Level::load_from(std::string path) {
 		glm::vec4 color = glm::vec4(r, g, b, a);
 		glm::vec4 s_color = glm::vec4(s_r, s_g, s_b, s_a);
 
-		point_lights.push_back(d_PointLight{ position, color,s_color, intensity, falloff, range });
+		point_lights.push_back(d_PointLight{ position, color, s_color, intensity, falloff, range });
 	}
 
 	std::getline(in, line);
 	std::istringstream in2(line);
 
-	float r, g, b, a, s_r, s_g, s_b, s_a;
+	float r, g, b, a, s_r, s_g, s_b, s_a, intensity;
 
-	in2 >> r >> g >> b >> a >> s_r >> s_g >> s_b >> s_a;
+	in2 >> r >> g >> b >> a >> s_r >> s_g >> s_b >> s_a >> intensity;
 
-	d_AmbientLight amb_light = { glm::vec4(r, g, b, a), glm::vec4(s_r, s_g, s_b, s_a) };
+	d_AmbientLight amb_light = { glm::vec4(r, g, b, a), glm::vec4(s_r, s_g, s_b, s_a), intensity};
 
 	this->d_model_instance_count = static_cast<uint32_t>(this->model_instances.size());
 

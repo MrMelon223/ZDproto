@@ -31,9 +31,9 @@ Texture::Texture(std::string path) {
 				cols.w = static_cast<float>(ptr[y * 4 + (x * dims) + 3]) / 255;
 			}
 			else if (dims <= 3) {
-				cols.x = static_cast<float>(ptr[y * 4 + (x * dims)]) / 255;
-				cols.y = static_cast<float>(ptr[y * 4 + (x * dims) + 1]) / 255;
-				cols.z = static_cast<float>(ptr[y * 4 + (x * dims) + 2]) / 255;
+				cols.x = static_cast<float>(ptr[y * 3 + (x * dims)]) / 255;
+				cols.y = static_cast<float>(ptr[y * 3 + (x * dims) + 1]) / 255;
+				cols.z = static_cast<float>(ptr[y * 3 + (x * dims) + 2]) / 255;
 				cols.w = 1.0f;
 			}
 			this->data.push_back(cols);

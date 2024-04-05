@@ -75,7 +75,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 
 		ray->position = position;
 		bool intersected = false, tried = false;
-		float last_leng = 10.0f;
+		float last_leng = 1000.0f;
 
 		for (int j1 = 0; j1 < instance_count; j1++) {
 			d_ModelInstance* g = &instances[j1];
@@ -98,7 +98,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 					if (tr < last_leng) {
 						//printf("Intersection true!\n");
 
-						intersect = ray->position + tr * ray->direction;
+						intersect = ray->position + offset + tr * ray->direction;
 						glm::vec3 diff = intersect - position;
 
 						glm::vec3 bayo_coord = glm::inverse(glm::mat3(vs[t->b].position + offset - vs[t->a].position + offset, vs[t->c].position + offset - vs[t->a].position + offset, intersect - vs[t->a].position + offset)) * (intersect - vs[t->a].position + offset);
@@ -142,33 +142,31 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 		y = ((j * 128 + i) - x) / dims.x;
 	uint32_t idx = y * dims.x + x;
 
+	out[idx] = glm::vec4(0.0f);
+
 	Ray* ray = &rays[idx];
 	if (ray->intersected) {
+		glm::vec3 result = glm::vec3(0.0f);
 		glm::vec4 diffuse_color = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
 
 		glm::vec4 lighting = glm::vec4(0.0f);
 		bool lit = false;
-
+		float cummulative_intensity = 0.0f;
 		for (int l = 0; l < lights_size; l++) {
-			glm::vec3 diff = ray->payload.intersection - lights[l].position;
-			float dist = diff.length();
 
-			float intensity_val = (1.0f / (dist * dist * lights[l].falloff_distance)) * lights[l].intensity;
-			if (intensity_val > 0.0f && dist <= lights[l].range) {
-				float m = glm::dot(ray->payload.triangle->normal, diff);
-				if (m > 0.0f) {
-					lighting += glm::vec4(intensity_val * lights[l].diffuse_color * m);
-				}
-				else {
-				}
-				lit = true;
-			}
-			/*else {
-				buff[y * dims.x + x] += glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-			}*/
+			float amb_strength = 0.1f;
+			glm::vec3 ambient = amb->intensity * amb->diffuse_color;
+
+			glm::vec3 light_direction = glm::normalize(lights[l].position - ray->payload.intersection);
+			float diff = glm::max(glm::dot(ray->payload.triangle->normal, light_direction), 0.0f);
+			glm::vec3 diffuse = diff * lights[l].diffuse_color;
+
+			result += (ambient + diffuse) * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
+
 		}
 
-		out[idx] = diffuse_color + lighting;
+		out[idx] += glm::vec4(result, 1.0f);
+
 	}
 	else {
 	}
