@@ -24,7 +24,7 @@ namespace Runtime {
 	static bool MOUSE_USED = false;
 	static int CURRENT_MOUSE = -1;
 
-	static float BASE_SPEED = 100.0f;
+	static float BASE_SPEED = 10.0f;
 
 	static float X_SENSITIVITY = 1.0f;
 	static float Y_SENSITIVITY = 1.0f;

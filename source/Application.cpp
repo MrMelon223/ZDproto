@@ -36,8 +36,8 @@ Application::Application(int32_t dimx, int32_t dimy) {
 	this->win = glfwCreateWindow(this->dims.x, this->dims.y, "ZDproto-demo v0.00", NULL, NULL);
 	this->loop = true;
 
-	glm::vec3 init_position = glm::vec3(1.0f, 0.0f, 0.0f);
-	glm::vec3 init_direction = glm::vec3(0.0f, 90.0f, 0.0f);
+	glm::vec3 init_position = glm::vec3(10.0f, 10.0f, 0.0f);
+	glm::vec3 init_direction = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	this->camera = new Camera(this->dims, 120.0f, init_position, init_direction);
 

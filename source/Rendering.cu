@@ -156,10 +156,11 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 
 			float amb_strength = 0.1f;
 			glm::vec3 ambient = amb->intensity * amb->diffuse_color;
-
-			glm::vec3 light_direction = glm::normalize(lights[l].position - ray->payload.intersection);
+			glm::vec3 light_direction = lights[l].position - ray->payload.intersection;
+			float distance = light_direction.length();
 			float diff = glm::max(glm::dot(ray->payload.triangle->normal, light_direction), 0.0f);
-			glm::vec3 diffuse = diff * lights[l].diffuse_color;
+			float intensity = lights[l].intensity / (distance * distance);
+			glm::vec3 diffuse = intensity * lights[l].diffuse_color * diff;
 
 			result += (ambient + diffuse) * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
 
@@ -169,6 +170,7 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 
 	}
 	else {
+		out[idx] = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
 	}
 }
 
