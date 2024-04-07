@@ -1,7 +1,7 @@
 #ifndef LIGHT_H
 #define LIGHT_H
 
-#include "Helper.h"
+#include "Helper.cuh"
 
 struct d_PointLight {
 	glm::vec3 position;

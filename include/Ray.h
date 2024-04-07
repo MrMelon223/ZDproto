@@ -1,7 +1,7 @@
 #ifndef RAY_H
 #define RAY_H
 
-#include "Helper.h"
+#include "Helper.cuh"
 #include "Model.h"
 
 struct Payload {

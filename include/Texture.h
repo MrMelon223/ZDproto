@@ -1,7 +1,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 
-#include "Helper.h"
+#include "Helper.cuh"
 
 struct TextureInstance {
 	glm::ivec2 dims;

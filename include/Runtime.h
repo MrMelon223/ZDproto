@@ -3,12 +3,15 @@
 
 #include "Model.h"
 
+extern std::vector<HostModel> HOST_MODELS;
+extern std::vector<d_Model> DEVICE_MODELS;
+
 namespace Runtime {
-	static std::vector<HostModel> HOST_MODELS;
-	static std::vector<d_Model> DEVICE_MODELS;
+	void runtime_load();
 
 	bool host_models_contains(std::string);
 	HostModel* find_host_model(std::string);
+	uint32_t find_host_model_index(std::string);
 
 		// Controls
 	static bool KEY_USED = false;
@@ -24,7 +27,7 @@ namespace Runtime {
 	static bool MOUSE_USED = false;
 	static int CURRENT_MOUSE = -1;
 
-	static float BASE_SPEED = 10.0f;
+	static float BASE_SPEED = 100.0f;
 
 	static float X_SENSITIVITY = 1.0f;
 	static float Y_SENSITIVITY = 1.0f;

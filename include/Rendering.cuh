@@ -1,9 +1,12 @@
 #ifndef RENDERING_CUH
 #define RENDERING_CUH
 
-#include "Helper.h"
+#include "Helper.cuh"
 #include "Light.h"
 #include "Ray.h"
+
+__device__
+void transform();
 
 __device__
 glm::vec4 sample_texture(glm::vec4*, glm::ivec2, float, float);

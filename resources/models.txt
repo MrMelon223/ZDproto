@@ -1,2 +1,4 @@
-resources/models/test.txt
-resources/models/test2.txt
+resources/models/monkey.txt
+resources/models/fish.txt
+resources/models/cube_test.txt
+resources/models/big_plane.txt

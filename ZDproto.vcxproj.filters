@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\Application.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -25,9 +22,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Primitives.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Level.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Model.h">
@@ -48,18 +42,27 @@
     <ClInclude Include="include\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\FiniteStates.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Object.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Level.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Helper.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\main.cpp">
+    <ClCompile Include="source\main.cu">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\Application.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\Camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\Level.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\Model.cpp">
@@ -71,9 +74,18 @@
     <ClCompile Include="source\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\FiniteStates.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\Rendering.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="source\Level.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

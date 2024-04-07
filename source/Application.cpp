@@ -43,6 +43,8 @@ Application::Application(int32_t dimx, int32_t dimy) {
 
 	this->level = new Level("resources/levels/test_level.txt");
 
+	//this->ai.push_back(FiniteStateMachine(glm::vec3(10.0f, 0.0f, 0.0f), this->level, ));
+
 	glfwMakeContextCurrent(this->win);
 }
 
@@ -129,6 +131,7 @@ void Application::main_loop() {
 	glfwMakeContextCurrent(this->win);
 
 	while (this->loop && !glfwWindowShouldClose(this->win)) {
+
 		glfwPollEvents();
 		this->frame_buffer = new glm::vec4[this->dims.x * this->dims.y];
 		glm::vec4* d_frame_buffer;
@@ -154,6 +157,14 @@ void Application::main_loop() {
 		this->camera->add_to_euler_direction(glm::vec2(static_cast<float>(x), static_cast<float>(y)));
 		glfwSetCursorPos(this->win, this->dims.x * 0.5f, this->dims.y * 0.5f);
 
+		Object test_position = this->level->get_objects_ptr()[0];
+		test_position.set_position(test_position.get_position() + (test_position.get_direction() * (static_cast<float>(glfwGetTime()) - this->camera->get_last_time())));
+		std::cout << "Object0 Position @ { " << test_position.get_position().x << ", " << test_position.get_position().y << ", " << test_position.get_position().z << " }" << std::endl;
+ 		this->level->update_object(0, test_position);
+
+
+		this->level->upload_objects();
+		this->level->upload_instances();
 
 			// Render functions
 		this->camera->capture(this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), this->level->get_d_ambient_light(), this->level->get_d_point_lights(), this->level->get_d_point_lights_size(), d_frame_buffer);

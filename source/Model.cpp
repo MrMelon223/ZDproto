@@ -29,7 +29,7 @@ void HostModel::load_from(std::string path) {
 	this->name = extract_name(this->filepath);
 
 	std::ifstream in;
-	in.open(path, std::ios_base::in);
+	in.open(this->filepath, std::ios_base::in);
 
 	if (!in) {
 		std::cout << "Cannot find model " << path << std::endl;
@@ -81,7 +81,7 @@ void HostModel::load_from(std::string path) {
 
 		this->triangles.push_back(Tri{ x, y, z, glm::cross(this->vertices.at(x).position - this->vertices.at(y).position, this->vertices.at(x).position - this->vertices.at(z).position) });
 	}
-	this->color_map = Texture("resources/textures/test.png");
+	this->color_map = Texture("resources/textures/default.png");
 }
 
 HostModel::HostModel() {

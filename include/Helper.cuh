@@ -1,7 +1,7 @@
-#ifndef HELPER_H
-#define HELPER_H
+#ifndef HELPER_CUH
+#define HELPER_CUH
 
-	// Standard Libraries
+// Standard Libraries
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -11,6 +11,8 @@
 	// Vectors/Matrices
 #include <glm/glm.hpp>
 #include <glm/gtx/intersect.hpp>	// Secret Sauce
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_inverse.hpp>
 	// Window Library
 #include <GLFW/glfw3.h>
 	// Textures
@@ -18,10 +20,12 @@
 	// SSE/AVX Load/Stores >:)
 #include <immintrin.h>
 	// CUDA "Schtuff"
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 #include <vector_types.h>
 #include <vector_functions.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 static inline void error_check(cudaError_t e) {
 	if (e != cudaSuccess) {

@@ -2,7 +2,7 @@
 #define APPLICATION_H
 
 #include "Camera.h"
-#include "Level.h"
+#include "Level.cuh"
 
 static void keyboard_callback(GLFWwindow*, int, int, int, int);
 static void mouse_callback(GLFWwindow*, int, int, int);
@@ -14,6 +14,8 @@ protected:
 
 	Level* level;
 	Camera* camera;
+
+	//std::vector<FiniteStateMachine> ai;
 
 	bool loop;
 

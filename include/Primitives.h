@@ -1,7 +1,7 @@
 #ifndef PRIMITIVES_H
 #define PRIMITIVES_H
 
-#include "Helper.h"
+#include "Helper.cuh"
 
 struct Vertex {
 	glm::vec3 position;

@@ -5,7 +5,7 @@
 #include "Runtime.h"
 #include "Ray.h"
 
-static const uint32_t MAX_BOUNCE_COUNT = 3;
+static const uint32_t MAX_BOUNCE_COUNT = 1;
 
 class Camera {
 protected:

@@ -12,8 +12,28 @@ glm::vec4 interpolateColor3D(const glm::vec4& c1, const glm::vec4& c2, const glm
 }
 
 __device__
+glm::vec3 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0, const glm::vec2& vertex1, const glm::vec2& vertex2) {
+	glm::vec2 v0 = vertex1 - vertex0;
+	glm::vec2 v1 = vertex2 - vertex0;
+	glm::vec2 v2 = point - vertex0;
+
+	float dot00 = glm::dot(v0, v0);
+	float dot01 = glm::dot(v0, v1);
+	float dot02 = glm::dot(v0, v2);
+	float dot11 = glm::dot(v1, v1);
+	float dot12 = glm::dot(v1, v2);
+
+	float denom = dot00 * dot11 - dot01 * dot01;
+	float barycentricY = (dot11 * dot02 - dot01 * dot12) / denom;
+	float barycentricZ = (dot00 * dot12 - dot01 * dot02) / denom;
+	float barycentricX = 1.0f - barycentricY - barycentricZ;
+
+	return glm::vec3(barycentricX, barycentricY, barycentricZ);
+}
+
+__device__
 glm::vec4 sample_texture(glm::vec4* texture, glm::ivec2 dims, float x, float y) {
-	if (y >= 0 && x >= 0) {
+	if (y >= 0.0f && x >= 0.0f) {
 		return texture[static_cast<int>(y * dims.y) * dims.x + static_cast<int>(x * dims.x)];
 	}
 	return glm::vec4(0.0f);
@@ -70,22 +90,24 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 		y = ((j * 128 + i) - x) / dims.x;
 	uint32_t idx = y * dims.x + x;
 
-	if (!(x >= dims.x && x < 0) && !(x >= dims.y && y < 0)) {
+	if (!(x >= dims.x || x < 0) && !(y >= dims.y || y < 0)) {
+		//printf("ray index = %i\n", idx);
 		Ray* ray = &rays[idx];
 
 		ray->position = position;
 		bool intersected = false, tried = false;
 		float last_leng = 1000.0f;
-
+		//printf("%i # Instances\n", instance_count);
 		for (int j1 = 0; j1 < instance_count; j1++) {
 			d_ModelInstance* g = &instances[j1];
 			//printf("ModelIndex = %i\n", g->model_index);
-			uint32_t c = *(models[g->model_index - 1].triangle_count);
+			//printf("Model Index %i\n", g->model_index);
+			uint32_t c = *(models[g->model_index].triangle_count);
 			for (int k = 0; k < c; k++) {
 				tried = true;
 				//if (instances[j1].model->tri_visible[k]) {
-				Tri* t = &models[instances[j1].model_index - 1].triangles[k];
-				Vertex* vs = models[instances[j1].model_index - 1].vertices;
+				Tri* t = &models[instances[j1].model_index].triangles[k];
+				Vertex* vs = models[instances[j1].model_index].vertices;
 				glm::vec3 offset = instances[j1].position;
 
 				glm::vec2 intersection;
@@ -98,26 +120,32 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 					if (tr < last_leng) {
 						//printf("Intersection true!\n");
 
-						intersect = ray->position + offset + tr * ray->direction;
+						intersect = ray->position + tr * ray->direction;
 						glm::vec3 diff = intersect - position;
 
-						glm::vec3 bayo_coord = glm::inverse(glm::mat3(vs[t->b].position + offset - vs[t->a].position + offset, vs[t->c].position + offset - vs[t->a].position + offset, intersect - vs[t->a].position + offset)) * (intersect - vs[t->a].position + offset);
-
-						glm::vec4 fin_color = interpolateColor3D(vs[t->a].color, vs[t->b].color, vs[t->c].color, bayo_coord.x, bayo_coord.y, bayo_coord.z);
 						//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
 
-						//uv = bayo_coord.x * vs[t->a].uv + bayo_coord.y * vs[t->b].uv + bayo_coord.z * vs[t->c].uv;
+						glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
+
+						glm::mat3 a_inv = glm::inverse(a);
+						glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
+
+						//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
+
+						//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
+						uv = uv;
+						//uv = glm::vec2(barycentric.x, barycentric.y);
 
 						//uv /= 10.0f;
 
 						uv = glm::clamp(uv, 0.0f, 1.0f);
 
 						//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
-						ray->payload.color = fin_color;
+						ray->payload.color = glm::vec4(1.0f);
 						ray->payload.intersection = intersect;
 						ray->payload.uv = uv;
 						ray->intersected = true;
-						ray->payload.model = &models[g->model_index - 1];
+						ray->payload.model = &models[g->model_index];
 						ray->payload.triangle = t;
 						intersected = true;
 						last_leng = tr;

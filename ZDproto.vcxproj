@@ -113,7 +113,8 @@
     <CudaCompile>
       <CodeGeneration>compute_86,sm_86</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
-      <MaxRegCount>16</MaxRegCount>
+      <MaxRegCount>32</MaxRegCount>
+      <AdditionalOptions>-stdpar=gpu %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,10 +136,12 @@
   <ItemGroup>
     <ClInclude Include="include\Application.h" />
     <ClInclude Include="include\Camera.h" />
-    <ClInclude Include="include\Helper.h" />
-    <ClInclude Include="include\Level.h" />
+    <ClInclude Include="include\FiniteStates.h" />
+    <ClInclude Include="include\Helper.cuh" />
+    <ClInclude Include="include\Level.cuh" />
     <ClInclude Include="include\Light.h" />
     <ClInclude Include="include\Model.h" />
+    <ClInclude Include="include\Object.h" />
     <ClInclude Include="include\Primitives.h" />
     <ClInclude Include="include\Ray.h" />
     <ClInclude Include="include\Rendering.cuh" />
@@ -148,13 +151,15 @@
   <ItemGroup>
     <ClCompile Include="source\Application.cpp" />
     <ClCompile Include="source\Camera.cpp" />
-    <ClCompile Include="source\Level.cpp" />
-    <ClCompile Include="source\main.cpp" />
+    <ClCompile Include="source\FiniteStates.cpp" />
+    <ClCompile Include="source\main.cu" />
     <ClCompile Include="source\Model.cpp" />
+    <ClCompile Include="source\Object.cpp" />
     <ClCompile Include="source\Runtime.cpp" />
     <ClCompile Include="source\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="source\Level.cu" />
     <CudaCompile Include="source\Rendering.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
