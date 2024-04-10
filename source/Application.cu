@@ -41,7 +41,7 @@ Application::Application(int32_t dimx, int32_t dimy) {
 
 	this->camera = new Camera(this->dims, 120.0f, init_position, init_direction);
 
-	this->level = new Level("resources/levels/test_level.txt");
+	this->level = new Level("resources/levels/test_level.txt", this->camera);
 
 	//this->ai.push_back(FiniteStateMachine(glm::vec3(10.0f, 0.0f, 0.0f), this->level, ));
 
@@ -103,9 +103,30 @@ void Application::mouse_handle() {
 	switch (Runtime::CURRENT_MOUSE) {
 	case GLFW_MOUSE_BUTTON_LEFT:
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
-			double x, y;
-			glfwGetCursorPos(this->win, &x, &y);
-			this->camera->add_to_euler_direction(glm::vec2(static_cast<float>(x), static_cast<float>(y)));
+			glm::vec3 fire_direction = this->camera->get_direction();
+
+			bool* intersection_tests = new bool[this->level->get_object_count()],* d_intersection_tests;
+			error_check(cudaMalloc((void**)&d_intersection_tests, this->level->get_object_count() * sizeof(bool)), "Application::mouse_handle cudaMalloc");
+			//std::cout << this->level->get_d_object_count() << " Objects going in @ " << this->level->get_d_objects() << std::endl;
+			test_intersection << <(this->level->get_d_object_count() / 128) + 1, 128 >> > (this->camera->get_position(), fire_direction, this->level->get_d_objects(), this->level->get_d_object_count(), this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), d_intersection_tests);
+			cudaDeviceSynchronize();
+			error_check(cudaGetLastError(), "Application::mouse_handle kernel call");
+
+			error_check(cudaMemcpy(intersection_tests, d_intersection_tests, this->level->get_object_count() * sizeof(bool), cudaMemcpyDeviceToHost), "Application::mouse_handle cudaMemcpy");
+			
+			for (size_t i = 0; i < this->level->get_object_count(); i++) {
+				if (intersection_tests[i]) {
+					Object objs = this->level->get_objects_ptr()[i];
+					objs.set_health(objs.get_health() - 25.0f);
+					if (objs.get_health() <= 0.0f) {
+						objs.set_position(objs.get_spawn_point());
+						objs.set_health(50.0f);
+					}
+					this->level->update_object(static_cast<uint32_t>(i), objs);
+				}
+			}
+
+			error_check(cudaFree(d_intersection_tests));
 		}
 		break;
 
@@ -130,6 +151,7 @@ void Application::main_loop() {
 	glfwSetMouseButtonCallback(this->win, mouse_callback);
 	glfwMakeContextCurrent(this->win);
 
+	int frame_count = 0;
 	while (this->loop && !glfwWindowShouldClose(this->win)) {
 
 		glfwPollEvents();
@@ -144,27 +166,28 @@ void Application::main_loop() {
 
 		error_check(cudaMemcpy(d_frame_buffer, this->frame_buffer, sizeof(glm::vec4) * this->dims.y * this->dims.x, cudaMemcpyHostToDevice));
 
+		Object* obj = this->level->get_objects_ptr();
+		std::cout << "Updating " << this->level->get_object_count() << " objects in world!" << std::endl;
+		for (size_t i = 0; i < this->level->get_object_count(); i++) {
+			obj[i].update(&this->level->get_model_instances()[obj[i].get_instance_index()], this->camera, glfwGetTime() - this->camera->get_last_time(), this->win);
+		}
+
+		if (frame_count != 0) {
+			level->clean_d_objects();
+		}
+
+		this->level->upload_objects();
+		this->level->upload_instances();
+		cudaDeviceSynchronize();
+
 		if (Runtime::KEY_USED) {
 			this->input_handle();
 			Runtime::control::reset_key();
 		}
 		if (Runtime::MOUSE_USED) {
-			//this->mouse_handle();
+			this->mouse_handle();
 			Runtime::control::reset_mouse();
 		}
-		double x, y;
-		glfwGetCursorPos(this->win, &x, &y);
-		this->camera->add_to_euler_direction(glm::vec2(static_cast<float>(x), static_cast<float>(y)));
-		glfwSetCursorPos(this->win, this->dims.x * 0.5f, this->dims.y * 0.5f);
-
-		Object test_position = this->level->get_objects_ptr()[0];
-		test_position.set_position(test_position.get_position() + (test_position.get_direction() * (static_cast<float>(glfwGetTime()) - this->camera->get_last_time())));
-		std::cout << "Object0 Position @ { " << test_position.get_position().x << ", " << test_position.get_position().y << ", " << test_position.get_position().z << " }" << std::endl;
- 		this->level->update_object(0, test_position);
-
-
-		this->level->upload_objects();
-		this->level->upload_instances();
 
 			// Render functions
 		this->camera->capture(this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), this->level->get_d_ambient_light(), this->level->get_d_point_lights(), this->level->get_d_point_lights_size(), d_frame_buffer);
@@ -186,6 +209,7 @@ void Application::main_loop() {
 		this->camera->debug_print();
 		//this->cam->last_time = glfwGetTime();
 		this->camera->set_last_time(glfwGetTime());
+		frame_count++;
 	}
 	glfwDestroyWindow(this->win);
 	glfwTerminate();

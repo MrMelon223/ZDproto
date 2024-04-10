@@ -5,6 +5,18 @@
 #include "Texture.h"
 
 struct d_Model;
+struct d_BoundingVolumeHierarchy;
+
+struct BoundingVolume {
+	Tri triangles[16];
+	Vertex vertices[2];
+	bool is_base;
+};
+
+struct BVHNode {
+	BoundingVolume volume;
+	int32_t left_child_index, right_child_index;
+};
 
 class HostModel {
 protected:
@@ -26,7 +38,21 @@ public:
 
 	uint32_t get_triangle_count() { return static_cast<uint32_t>(this->triangles.size()); }
 
+	std::vector<Vertex>* get_vertices() { return &this->vertices; }
+	std::vector<Tri>* get_triangles() { return &this->triangles; }
+
 	d_Model to_gpu();
+};
+
+class BoundingVolumeHierarchy {
+protected:
+	std::vector<BoundingVolume> base;
+	std::vector<std::vector<BoundingVolume>> tree;
+
+public:
+	BoundingVolumeHierarchy(HostModel*);
+
+	d_BoundingVolumeHierarchy to_gpu();
 };
 
 struct d_Model {

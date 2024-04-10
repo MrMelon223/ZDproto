@@ -24,6 +24,99 @@ std::string extract_name(std::string path) {
 	return bin_path;
 }
 
+BoundingVolumeHierarchy::BoundingVolumeHierarchy(HostModel* model) {
+	std::vector<Vertex> verts = *model->get_vertices();
+	std::vector<Tri> tris = *model->get_triangles();
+	for (size_t i = 0; i < model->get_triangle_count() / 16; i++) {
+		BoundingVolume vol = {};
+		for (uint8_t j = 0; j < 16; j++) {
+			vol.triangles[j] = tris.at(i * 16 + j);
+
+		}
+		glm::vec3 min, max = min = verts.at(vol.triangles[0].a).position;
+		for (uint8_t j = 0; j < 16; j++) {
+			Vertex* va = &verts.at(vol.triangles[j].a);
+			Vertex* vb = &verts.at(vol.triangles[j].b);
+			Vertex* vc = &verts.at(vol.triangles[j].c);
+			if (va->position.x < min.x) {
+				min.x = va->position.x;
+			}
+			if (va->position.x > max.x) {
+				max.x = va->position.z;
+			}
+
+			if (va->position.y < min.y) {
+				min.y = va->position.y;
+			}
+			if (va->position.y > max.y) {
+				max.y = va->position.y;
+			}
+
+			if (va->position.z < min.z) {
+				min.z = va->position.z;
+			}
+			if (va->position.z > max.z) {
+				max.z = va->position.z;
+			}
+
+			if (vb->position.x < min.x) {
+				min.x = vb->position.x;
+			}
+			if (vb->position.x > max.x) {
+				max.x = vb->position.z;
+			}
+
+			if (vb->position.y < min.y) {
+				min.y = vb->position.y;
+			}
+			if (vb->position.y > max.y) {
+				max.y = vb->position.y;
+			}
+
+			if (vb->position.z < min.z) {
+				min.z = vb->position.z;
+			}
+			if (vb->position.z > max.z) {
+				max.z = vb->position.z;
+			}
+
+			if (vc->position.x < min.x) {
+				min.x = vc->position.x;
+			}
+			if (vc->position.x > max.x) {
+				max.x = vc->position.z;
+			}
+
+			if (vc->position.y < min.y) {
+				min.y = vc->position.y;
+			}
+			if (vc->position.y > max.y) {
+				max.y = vc->position.y;
+			}
+
+			if (vc->position.z < min.z) {
+				min.z = vc->position.z;
+			}
+			if (vc->position.z > max.z) {
+				max.z = vc->position.z;
+			}
+		}
+
+		vol.vertices[0] = Vertex{ glm::vec3(min), tris.at(i).normal, glm::vec4(0.0f), glm::vec2(0.0f) };
+		vol.vertices[1] = Vertex{ glm::vec3(max), tris.at(i).normal, glm::vec4(0.0f), glm::vec2(0.0f) };
+		vol.is_base = true;
+
+		this->base.push_back(vol);
+	}
+
+	BVHNode ancestor;
+	ancestor.left_child_index = -1;
+	ancestor.right_child_index = -1;
+
+
+	uint32_t width = this->base.size();
+}
+
 void HostModel::load_from(std::string path) {
 	this->filepath = path;
 	this->name = extract_name(this->filepath);

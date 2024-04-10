@@ -117,7 +117,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 				if (intersection_detection) {
 					glm::vec3 intersect = (d * direction) + position;
 					float tr = d;//(intersect - position).length();
-					if (tr < last_leng) {
+					if (tr < last_leng && tr >= 0.1f) {
 						//printf("Intersection true!\n");
 
 						intersect = ray->position + tr * ray->direction;

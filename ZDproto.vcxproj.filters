@@ -59,9 +59,6 @@
     <ClCompile Include="source\main.cu">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="source\Application.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="source\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -86,6 +83,9 @@
       <Filter>Source Files</Filter>
     </CudaCompile>
     <CudaCompile Include="source\Level.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="source\Application.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>

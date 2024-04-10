@@ -33,6 +33,12 @@ static inline void error_check(cudaError_t e) {
 	}
 }
 
+static inline void error_check(cudaError_t e, std::string func) {
+	if (e != cudaSuccess) {
+		std::cout << std::setw(10) << "Cuda Error: " << cudaGetErrorString(e) << " from function " << func << std::endl;
+	}
+}
+
 const __device__ float PI = 3.14159265;
 
 std::string extract_name(std::string);

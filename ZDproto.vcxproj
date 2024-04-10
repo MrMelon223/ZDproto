@@ -111,10 +111,11 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_86,sm_86</CodeGeneration>
+      <CodeGeneration>compute_89,sm_89</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <MaxRegCount>32</MaxRegCount>
       <AdditionalOptions>-stdpar=gpu %(AdditionalOptions)</AdditionalOptions>
+      <CudaRuntime>Shared</CudaRuntime>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,7 +150,6 @@
     <ClInclude Include="include\Texture.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Application.cpp" />
     <ClCompile Include="source\Camera.cpp" />
     <ClCompile Include="source\FiniteStates.cpp" />
     <ClCompile Include="source\main.cu" />
@@ -159,6 +159,7 @@
     <ClCompile Include="source\Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="source\Application.cu" />
     <CudaCompile Include="source\Level.cu" />
     <CudaCompile Include="source\Rendering.cu" />
   </ItemGroup>
