@@ -114,8 +114,10 @@
       <CodeGeneration>compute_89,sm_89</CodeGeneration>
       <GenerateLineInfo>true</GenerateLineInfo>
       <MaxRegCount>32</MaxRegCount>
-      <AdditionalOptions>-stdpar=gpu %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-stdpar=gpu -gencode arch=compute_89,code=sm_89 %(AdditionalOptions)</AdditionalOptions>
       <CudaRuntime>Shared</CudaRuntime>
+      <FastMath>false</FastMath>
+      <SplitCompile>MaxThreads</SplitCompile>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -148,6 +150,7 @@
     <ClInclude Include="include\Rendering.cuh" />
     <ClInclude Include="include\Runtime.h" />
     <ClInclude Include="include\Texture.h" />
+    <ClInclude Include="include\Weapon.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\Camera.cpp" />
@@ -155,13 +158,14 @@
     <ClCompile Include="source\main.cu" />
     <ClCompile Include="source\Model.cpp" />
     <ClCompile Include="source\Object.cpp" />
-    <ClCompile Include="source\Runtime.cpp" />
     <ClCompile Include="source\Texture.cpp" />
+    <ClCompile Include="source\Weapon.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="source\Application.cu" />
     <CudaCompile Include="source\Level.cu" />
     <CudaCompile Include="source\Rendering.cu" />
+    <CudaCompile Include="source\Runtime.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

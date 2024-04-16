@@ -7,8 +7,10 @@
 struct d_Model;
 struct d_BoundingVolumeHierarchy;
 
+const int BVH_TRIANGLE_COUNT = 16;
+
 struct BoundingVolume {
-	Tri triangles[16];
+	Tri** triangles;
 	Vertex vertices[2];
 	bool is_base;
 };
@@ -46,8 +48,7 @@ public:
 
 class BoundingVolumeHierarchy {
 protected:
-	std::vector<BoundingVolume> base;
-	std::vector<std::vector<BoundingVolume>> tree;
+	std::vector<BoundingVolume> tree;
 
 public:
 	BoundingVolumeHierarchy(HostModel*);
@@ -67,8 +68,9 @@ struct d_ModelInstance {
 	uint32_t model_index;
 	bool* visible_triangles;
 	glm::vec3 position, rotation;
+	bool is_hitbox;
 };
 
-d_ModelInstance create_instance(uint32_t, glm::vec3, glm::vec3, uint32_t);
+d_ModelInstance create_instance(uint32_t, glm::vec3, glm::vec3, uint32_t, bool);
 
 #endif

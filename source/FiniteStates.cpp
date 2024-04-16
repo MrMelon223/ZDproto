@@ -18,5 +18,5 @@ void FiniteStateMachine::update_target_position() {
 void FiniteStateMachine::update_position(float t) {
 	this->direction = glm::normalize(this->target_position - this->position);
 
-	this->position += t * Runtime::BASE_SPEED * this->direction;
+	//this->position += t * Runtime::BASE_SPEED * this->direction;
 }

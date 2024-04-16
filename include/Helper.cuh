@@ -26,6 +26,8 @@
 #include <vector_functions.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+	// Database Library
+#include <sqlite3.h>
 
 static inline void error_check(cudaError_t e) {
 	if (e != cudaSuccess) {

@@ -21,6 +21,8 @@ protected:
 
 	glm::vec4* frame_buffer;
 
+	sqlite3* database_connection;
+
 	void input_handle();
 	void mouse_handle();
 

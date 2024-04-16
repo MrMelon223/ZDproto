@@ -1,13 +1,24 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 
+#include "Application.h"
+#include "Weapon.h"
+#include "Object.h"
 #include "Model.h"
 
 extern std::vector<HostModel> HOST_MODELS;
 extern std::vector<d_Model> DEVICE_MODELS;
 
+
+extern Object* PLAYER_OBJECT;
+
 namespace Runtime {
-	void runtime_load();
+	extern std::vector<Object> OBJECTS;
+	extern std::vector<BulletWeapon> WEAPONS;
+
+	void runtime_load(sqlite3*);
+	void load_objects(sqlite3*);
+	void load_weapons(sqlite3*);
 
 	bool host_models_contains(std::string);
 	HostModel* find_host_model(std::string);

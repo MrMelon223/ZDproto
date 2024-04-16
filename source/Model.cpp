@@ -29,15 +29,16 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(HostModel* model) {
 	std::vector<Tri> tris = *model->get_triangles();
 	for (size_t i = 0; i < model->get_triangle_count() / 16; i++) {
 		BoundingVolume vol = {};
-		for (uint8_t j = 0; j < 16; j++) {
-			vol.triangles[j] = tris.at(i * 16 + j);
+		vol.triangles = (Tri**)malloc(BVH_TRIANGLE_COUNT * sizeof(Tri*));
+		for (uint8_t j = 0; j < BVH_TRIANGLE_COUNT; j++) {
+			vol.triangles[j] = &tris.at(i * 16 + j);
 
 		}
-		glm::vec3 min, max = min = verts.at(vol.triangles[0].a).position;
-		for (uint8_t j = 0; j < 16; j++) {
-			Vertex* va = &verts.at(vol.triangles[j].a);
-			Vertex* vb = &verts.at(vol.triangles[j].b);
-			Vertex* vc = &verts.at(vol.triangles[j].c);
+		glm::vec3 min, max = min = verts.at(vol.triangles[0]->a).position;
+		for (uint8_t j = 1; j < BVH_TRIANGLE_COUNT; j++) {
+			Vertex* va = &verts.at(vol.triangles[j]->a);
+			Vertex* vb = &verts.at(vol.triangles[j]->b);
+			Vertex* vc = &verts.at(vol.triangles[j]->c);
 			if (va->position.x < min.x) {
 				min.x = va->position.x;
 			}
@@ -106,15 +107,8 @@ BoundingVolumeHierarchy::BoundingVolumeHierarchy(HostModel* model) {
 		vol.vertices[1] = Vertex{ glm::vec3(max), tris.at(i).normal, glm::vec4(0.0f), glm::vec2(0.0f) };
 		vol.is_base = true;
 
-		this->base.push_back(vol);
+		this->tree.push_back(vol);
 	}
-
-	BVHNode ancestor;
-	ancestor.left_child_index = -1;
-	ancestor.right_child_index = -1;
-
-
-	uint32_t width = this->base.size();
 }
 
 void HostModel::load_from(std::string path) {
@@ -212,11 +206,13 @@ d_Model HostModel::to_gpu() {
 	return ret;
 }
 
-d_ModelInstance create_instance(uint32_t model_index, glm::vec3 position, glm::vec3 rotation, uint32_t triangle_count) {
+d_ModelInstance create_instance(uint32_t model_index, glm::vec3 position, glm::vec3 rotation, uint32_t triangle_count, bool is_hitbox) {
 	d_ModelInstance ret{};
 	ret.model_index = model_index;
 	ret.position = position;
 	ret.rotation = rotation;
+
+	ret.is_hitbox = is_hitbox;
 
 	error_check(cudaMalloc((void**)&ret.visible_triangles, triangle_count));
 

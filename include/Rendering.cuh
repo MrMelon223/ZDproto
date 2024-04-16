@@ -19,6 +19,9 @@ __global__
 void setup_rays(glm::vec3, glm::vec3, float, Ray*, glm::ivec2);
 
 __global__
+void set_visible_tris(glm::vec3, glm::vec3, glm::vec2, d_Model*, d_ModelInstance*, uint32_t);
+
+__global__
 void capture_with_rays(glm::vec3, glm::vec3, float, d_ModelInstance*, uint32_t, Ray*, glm::ivec2, d_Model*);
 
 __global__

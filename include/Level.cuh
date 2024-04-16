@@ -3,7 +3,6 @@
 
 
 #include "Model.h"
-#include "Runtime.h"
 #include "Light.h"
 #include "Object.h"
 
@@ -34,6 +33,8 @@ protected:
 
 	void load_from(std::string);
 
+	Object* PLAYER_OBJECT;
+
 public:
 	Level();
 	Level(std::string, Camera*);
@@ -62,6 +63,8 @@ public:
 	void clean_d_objects();
 	Object* get_d_objects() { return this->d_objects; }
 	uint32_t get_d_object_count() { return this->d_object_count; }
+
+	Object* get_player_object() { return this->PLAYER_OBJECT; }
 
 
 	//uint32_t get_instance_index(d_ModelInstance);

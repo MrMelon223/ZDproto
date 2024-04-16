@@ -41,6 +41,8 @@ glm::vec4 sample_texture(glm::vec4* texture, glm::ivec2 dims, float x, float y) 
 
 void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, d_AmbientLight* amb_light, d_PointLight* point_lights, uint32_t point_lights_size, glm::vec4* buffer) {
 	setup_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, this->d_ray_matrix[0], this->dims);
+	set_visible_tris << < (instance_count / 128) + 1, 128 >> > (this->position, this->direction, this->fov, models, instances, instance_count);
+	cudaDeviceSynchronize();
 	for (uint8_t i = 0; i < MAX_BOUNCE_COUNT; i++) {
 		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
 		cudaDeviceSynchronize();
@@ -59,7 +61,7 @@ void setup_rays(glm::vec3 position, glm::vec3 direction, float horizontal_fov, R
 		y = ((j * 128 + i) - x) / dims.x;
 	uint32_t idx = y * dims.x + x;
 
-	if (!(x >= dims.x && x < 0) && !(x >= dims.y && y < 0)) {
+	if (!(x >= dims.x && x < 0) && !(y >= dims.y && y < 0)) {
 		Ray* ray = &rays[idx];
 
 		//ray->position = position;
@@ -79,6 +81,57 @@ void setup_rays(glm::vec3 position, glm::vec3 direction, float horizontal_fov, R
 		up = glm::normalize(up);
 
 		ray->direction = direction + norm_x * half_fov * ratio * right + norm_y * half_fov * up;
+	}
+}
+
+__global__
+void set_visible_tris(glm::vec3 position, glm::vec3 direction, glm::vec2 fov, d_Model* models, d_ModelInstance* instances, uint32_t instance_count) {
+	int j = blockDim.y * blockIdx.y + threadIdx.y,
+		i = blockDim.x * blockIdx.x + threadIdx.x,
+		x = (j * 128 + i);
+	uint32_t idx = x;
+
+	if (x < instance_count) {
+		if (!instances[idx].is_hitbox) {
+			glm::vec3 min_direction_x = glm::vec3((((-fov.x * 0.5f) / fov.x) * (PI / 180.0f)) * direction.x, direction.y, direction.z);
+			glm::vec3 max_direction_x = glm::vec3((((fov.x * 0.5f) / fov.x) * (PI / 180.0f)) * direction.x, direction.y, direction.z);
+			glm::vec3 min_direction_y = glm::vec3(direction.x, (((-fov.y * 0.5f) / fov.y) * (PI / 180.0f)) * direction.y, direction.z);
+			glm::vec3 max_direction_y = glm::vec3(direction.x, (((-fov.y * 0.5f) / fov.y) * (PI / 180.0f)) * direction.y, direction.z);
+
+			d_ModelInstance* instance = &instances[idx];
+			d_Model* model = &models[instance->model_index];
+			for (uint32_t k = 0; k < *model->triangle_count; k++) {
+
+				float answers[5];
+				answers[0] = glm::dot(model->triangles[k].normal, min_direction_x);
+				answers[1] = glm::dot(model->triangles[k].normal, max_direction_x);
+				answers[2] = glm::dot(model->triangles[k].normal, min_direction_y);
+				answers[3] = glm::dot(model->triangles[k].normal, max_direction_y);
+				answers[4] = glm::dot(model->triangles[k].normal, direction);
+
+				bool vis = false;
+				for (uint8_t m = 0; m < 5; m++) {
+					if (answers[m] <= 0.0f) {
+						vis = true;
+						break;
+					}
+				}
+
+				if (vis) {
+					instance->visible_triangles[k] = true;
+				}
+				else {
+					instance->visible_triangles[k] = false;
+				}
+				//instance->visible_triangles[k] = true;
+			}
+		}
+		else {
+			return;
+		}
+	}
+	else {
+		return;
 	}
 }
 
@@ -104,55 +157,58 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 			//printf("Model Index %i\n", g->model_index);
 			uint32_t c = *(models[g->model_index].triangle_count);
 			for (int k = 0; k < c; k++) {
-				tried = true;
-				//if (instances[j1].model->tri_visible[k]) {
-				Tri* t = &models[instances[j1].model_index].triangles[k];
-				Vertex* vs = models[instances[j1].model_index].vertices;
-				glm::vec3 offset = instances[j1].position;
+				if (g->visible_triangles[k] && !g->is_hitbox) {
+					tried = true;
+					//if (instances[j1].model->tri_visible[k]) {
+					Tri* t = &models[instances[j1].model_index].triangles[k];
+					Vertex* vs = models[instances[j1].model_index].vertices;
+					glm::vec3 offset = instances[j1].position;
+					glm::vec3 direction = instances[j1].rotation;
 
-				glm::vec2 intersection;
-				float d;
-				glm::vec2 uv;
-				bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, vs[t->a].position + offset, vs[t->b].position + offset, vs[t->c].position + offset, uv, d);
-				if (intersection_detection) {
-					glm::vec3 intersect = (d * direction) + position;
-					float tr = d;//(intersect - position).length();
-					if (tr < last_leng && tr >= 0.1f) {
-						//printf("Intersection true!\n");
+					glm::vec2 intersection;
+					float d;
+					glm::vec2 uv;
+					bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, vs[t->a].position + offset, vs[t->b].position + offset, vs[t->c].position + offset, uv, d);
+					if (intersection_detection) {
+						glm::vec3 intersect = (d * direction) + position;
+						float tr = d;//(intersect - position).length();
+						if (tr < last_leng && tr >= 0.1f) {
+							//printf("Intersection true!\n");
 
-						intersect = ray->position + tr * ray->direction;
-						glm::vec3 diff = intersect - position;
+							intersect = ray->position + tr * ray->direction;
+							glm::vec3 diff = intersect - position;
 
-						//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
+							//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
 
-						glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
+							glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
-						glm::mat3 a_inv = glm::inverse(a);
-						glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
+							glm::mat3 a_inv = glm::inverse(a);
+							glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
 
-						//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
+							//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
 
-						//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
-						uv = uv;
-						//uv = glm::vec2(barycentric.x, barycentric.y);
+							//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
+							uv = uv;
+							//uv = glm::vec2(barycentric.x, barycentric.y);
 
-						//uv /= 10.0f;
+							//uv /= 10.0f;
 
-						uv = glm::clamp(uv, 0.0f, 1.0f);
+							uv = glm::clamp(uv, 0.0f, 1.0f);
 
-						//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
-						ray->payload.color = glm::vec4(1.0f);
-						ray->payload.intersection = intersect;
-						ray->payload.uv = uv;
-						ray->intersected = true;
-						ray->payload.model = &models[g->model_index];
-						ray->payload.triangle = t;
-						intersected = true;
-						last_leng = tr;
+							//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
+							ray->payload.color = glm::vec4(1.0f);
+							ray->payload.intersection = intersect;
+							ray->payload.uv = uv;
+							ray->intersected = true;
+							ray->payload.model = &models[g->model_index];
+							ray->payload.triangle = t;
+							intersected = true;
+							last_leng = tr;
+						}
 					}
+				cont:;
+					continue;
 				}
-			cont:;
-				continue;
 			}
 		}
 		if (!intersected && tried) {

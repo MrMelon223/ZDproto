@@ -1,3 +1,4 @@
+resources/models/player_hitbox.txt
 resources/models/monkey.txt
 resources/models/fish.txt
 resources/models/cube_test.txt

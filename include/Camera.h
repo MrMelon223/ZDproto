@@ -2,7 +2,6 @@
 #define CAMERA_H
 
 #include "Rendering.cuh"
-#include "Runtime.h"
 #include "Ray.h"
 
 static const uint32_t MAX_BOUNCE_COUNT = 1;
