@@ -14,11 +14,10 @@ protected:
 
 	std::string name;
 
-	thrust::host_vector<Object> objects;
+	std::vector<Object> objects;
 	Object* d_objects;
 	uint32_t d_object_count;
 
-	thrust::host_vector<d_ModelInstance> model_instances;
 	d_ModelInstance* d_model_instances;
 	uint32_t d_model_instance_count;
 
@@ -41,7 +40,6 @@ public:
 
 	void add_model_instance(d_ModelInstance);
 
-	d_ModelInstance* get_model_instances() { return this->model_instances.data(); }
 	d_ModelInstance* get_d_model_instances() { return this->d_model_instances; }
 	uint32_t get_d_model_instance_count() { return this->d_model_instance_count; }
 

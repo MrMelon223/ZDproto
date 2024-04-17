@@ -7,9 +7,13 @@ std::vector<d_Model> DEVICE_MODELS;
 std::vector<Object> Runtime::OBJECTS;
 std::vector<BulletWeapon> Runtime::WEAPONS;
 
+Object* Runtime::PLAYER_OBJECT;
+std::vector<d_ModelInstance> Runtime::model_instances;
+
 int sql_callback(void* p_data, int num_fields, char** p_fields, char** p_col_names)
 {
 	try {
+		std::cout << "     Loading Assets" << std::endl;
 		for (size_t i = 0; i < num_fields; i++) {
 			HOST_MODELS.push_back(HostModel(p_fields[i]));
 			DEVICE_MODELS.push_back(HOST_MODELS.back().to_gpu());
@@ -33,20 +37,109 @@ void Runtime::runtime_load(sqlite3* sql) {
 
 	int r = sqlite3_exec(sql, command, sql_callback, NULL, &err);
 	if (r != SQLITE_OK) {
-		std::cerr << "SQL error: " << err << std::endl;
+		std::cerr << "SQL Model error: " << err << std::endl;
 		return;
 	}
 
-
-
-	std::cout << "Loading complete!" << std::endl;
 }
 
 int sql_callback_object(void* p_data, int num_fields, char** p_fields, char** p_col_names)
 {
 	try {
-		for (size_t i = 0; i < num_fields; i++) {
-			std::cout << p_fields[i] << std::endl;
+		std::cout << "	Objects:" << std::endl;
+		for (size_t h = 0; h < num_fields / 6; h++) {
+			Object o;
+
+			std::string obj_name, vis_model_name, hitbox_model_name;
+			uint32_t obj_type;
+			float mass_kg;
+			int bullet_coll;
+
+			for (size_t i = 0; i < 6; i++) {
+				char* str = p_fields[h * 6 + i];
+				std::istringstream in(str);
+
+				switch (i) {
+				case 0:
+					in >> obj_name;
+
+					break;
+				case 1:
+					in >> vis_model_name;
+					break;
+				case 2:
+					in >> hitbox_model_name;
+					break;
+				case 3:
+					in >> obj_type;
+					break;
+				case 4:
+					in >> mass_kg;
+					break;
+				case 5:
+					in >> bullet_coll;
+					break;
+				}
+
+				std::cout << str << std::endl;
+			}
+			if (obj_type == 0) {
+				ObjIndexs obj_idx;
+
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				Runtime::model_instances.push_back(d_mi);
+				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				Runtime::model_instances.push_back(d_hitbox);
+				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+				obj_idx.physics_object_index = Runtime::OBJECTS.size() - 1;
+				o = Object(ObjectType::AI, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),Runtime::find_host_model_index(vis_model_name),  d_mi_idx, d_hitbox_idx);
+			}
+			else if (obj_type == 1) {
+				ObjIndexs obj_idx;
+
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				Runtime::model_instances.push_back(d_mi);
+				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				Runtime::model_instances.push_back(d_hitbox);
+				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+				obj_idx.physics_object_index = Runtime::OBJECTS.size() - 1;
+				o = Object(ObjectType::Physics, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+			}
+			else if (obj_type == 2) {
+				ObjIndexs obj_idx;
+
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				Runtime::model_instances.push_back(d_mi);
+				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				Runtime::model_instances.push_back(d_hitbox);
+				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+				obj_idx.player_index = 0;
+				o = Object(ObjectType::Player, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+			}
+			else if (obj_type == 3) {
+				ObjIndexs obj_idx;
+
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				Runtime::model_instances.push_back(d_mi);
+				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), false);
+				Runtime::model_instances.push_back(d_hitbox);
+				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+				obj_idx.weapon_index= Runtime::find_weapon_index("Default Weapon");
+				o = Object(ObjectType::Player, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+			}
+			Runtime::OBJECTS.push_back(o);
+
+			if (o.get_object_type() == ObjectType::Player) {
+				Runtime::PLAYER_OBJECT = &Runtime::OBJECTS[Runtime::OBJECTS.size() - 1];
+			}
 		}
 	}
 	catch (...) {
@@ -60,14 +153,48 @@ void Runtime::load_objects(sqlite3* sql) {
 	const char* command = "SELECT * FROM objects;";
 	char* err;
 
+	std::cout << "Loading Models" << std::endl << std::endl;
+
+	std::cout << "	Loading Objects" << std::endl << std::endl;
+
 	Runtime::OBJECTS = *new std::vector<Object>();
 
 	int r = sqlite3_exec(sql, command, sql_callback_object, NULL, &err);
 	if (r != SQLITE_OK) {
-		std::cerr << "SQL error: " << err << std::endl;
+		std::cerr << "SQL Objects error: " << err << std::endl;
 		return;
 	}
 }
+
+Object* find_object(std::string n) {
+	uint32_t c = 0;
+	for (Object o : Runtime::OBJECTS) {
+		if (o.get_name() == n) {
+			return Runtime::OBJECTS.data() + (sizeof(Object) * c);
+		}
+		c++;
+	}
+}
+uint32_t Runtime::find_object_index(std::string n) {
+	uint32_t c = 0;
+	for (Object o : Runtime::OBJECTS) {
+		if (o.get_name() == n) {
+			return c;
+		}
+		c++;
+	}
+}
+
+uint32_t Runtime::find_weapon_index(std::string n) {
+	uint32_t c = 0;
+	for (BulletWeapon w : Runtime::WEAPONS) {
+		if (w.get_name() == n) {
+			return c;
+		}
+		c++;
+	}
+}
+
 
 void Camera::add_to_euler_direction(glm::vec2 rot) {
 	float x = rot.x, y = rot.y;
@@ -132,9 +259,190 @@ void Camera::left(float t) {
 int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_col_names)
 {
 	try {
-		for (size_t i = 0; i < num_fields; i++) {
-			std::cout << p_fields[i] << std::endl;
+		std::cout << "	Weapons:" << std::endl;
+		for (size_t h = 0; h < (num_fields / 7) + 1; h++) {
+			BulletWeapon w = BulletWeapon();
+			if (num_fields - (h * 7) >= 7) {
+				for (size_t i = 0; i < 7; i++) {
+					char* str = p_fields[h * 7 + i];
+					std::istringstream in(str);
+
+					int wpn_type = -1;
+					WeaponType type;
+
+					float w_speed = 0.0f;
+					float r_speed = 0.0f;
+					float b_dmg = 0.0f;
+					float f_delay = 0.01f;
+					std::string model_name;
+
+					uint32_t model_index = 0;
+					d_ModelInstance d_m;
+					uint32_t inst_idx = 0;
+
+					switch (i) {
+					case 0:
+						w.set_name(str);
+						break;
+					case 1:
+						in >> wpn_type;
+
+						type = WeaponType::SemiAutomatic;
+						if (wpn_type == 0) {
+							type = WeaponType::SemiAutomatic;
+						}
+						else if (wpn_type == 1) {
+							type = WeaponType::FullyAutomatic;
+						}
+						else if (wpn_type == 2) {
+							type = WeaponType::Burst;
+						}
+						else if (wpn_type == 3) {
+							type = WeaponType::BoltAction;
+						}
+						else if (wpn_type == 4) {
+							type = WeaponType::SingleShot;
+						}
+						else if (wpn_type == 5) {
+							type = WeaponType::Melee;
+						}
+
+						w.set_weapon_type(type);
+
+						break;
+					case 2:
+						in >> w_speed;
+
+						w.set_walk_speed(w_speed);
+
+						break;
+					case 3:
+						in >> r_speed;
+
+						w.set_run_speed(r_speed);
+
+						break;
+					case 4:
+						in >> b_dmg;
+
+						w.set_base_damage(b_dmg);
+
+						break;
+					case 5:
+						in >> f_delay;
+
+						w.set_fire_delay(f_delay);
+
+						break;
+					case 6:
+						in >> model_name;
+
+						model_index = Runtime::find_host_model_index(model_name);
+
+						d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false);
+						Runtime::model_instances.push_back(d_m);
+
+						inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+						w.set_instance_index(inst_idx);
+						break;
+
+					}
+					std::cout << str << std::endl;
+				}
+			}
+			else if (num_fields - (h * 7) < 7) {
+					for (size_t i = 0; i < num_fields - (h * 7); i++) {
+						char* str = p_fields[h * 7 + i];
+						std::istringstream in(str);
+
+						int wpn_type = -1;
+						WeaponType type;
+
+						float w_speed = 0.0f;
+						float r_speed = 0.0f;
+						float b_dmg = 0.0f;
+						float f_delay = 0.01f;
+						std::string model_name;
+
+						uint32_t model_index = 0;
+						d_ModelInstance d_m;
+						uint32_t inst_idx = 0;
+
+						switch (i) {
+						case 0:
+							w.set_name(str);
+							break;
+						case 1:
+							in >> wpn_type;
+
+							type = WeaponType::SemiAutomatic;
+							if (wpn_type == 0) {
+								type = WeaponType::SemiAutomatic;
+							}
+							else if (wpn_type == 1) {
+								type = WeaponType::FullyAutomatic;
+							}
+							else if (wpn_type == 2) {
+								type = WeaponType::Burst;
+							}
+							else if (wpn_type == 3) {
+								type = WeaponType::BoltAction;
+							}
+							else if (wpn_type == 4) {
+								type = WeaponType::SingleShot;
+							}
+							else if (wpn_type == 5) {
+								type = WeaponType::Melee;
+							}
+
+							w.set_weapon_type(type);
+
+							break;
+						case 2:
+							in >> w_speed;
+
+							w.set_walk_speed(w_speed);
+
+							break;
+						case 3:
+							in >> r_speed;
+
+							w.set_run_speed(r_speed);
+
+							break;
+						case 4:
+							in >> b_dmg;
+
+							w.set_base_damage(b_dmg);
+
+							break;
+						case 5:
+							in >> f_delay;
+
+							w.set_fire_delay(f_delay);
+
+							break;
+						case 6:
+							in >> model_name;
+
+							model_index = Runtime::find_host_model_index(model_name);
+
+							d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false);
+							Runtime::model_instances.push_back(d_m);
+
+							inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+							w.set_instance_index(inst_idx);
+
+						}
+						std::cout << str << std::endl;
+					}
+				}
+			w.set_offset(glm::vec3(0.25f, 0.25f, 0.25f));
+			Runtime::WEAPONS.push_back(w);
 		}
+		
 	}
 	catch (...) {
 		// abort select on failure, don't let exception propogate thru sqlite3 call-stack
@@ -151,7 +459,7 @@ void Runtime::load_weapons(sqlite3* sql) {
 
 	int r = sqlite3_exec(sql, command, sql_callback_weapon, NULL, &err);
 	if (r != SQLITE_OK) {
-		std::cerr << "SQL error: " << err << std::endl;
+		std::cerr << "SQL Weapons error: " << err << std::endl;
 		return;
 	}
 }
@@ -176,7 +484,7 @@ void Level::load_from(std::string path) {
 
 	std::cout << "Loading Level: " << path << std::endl;
 
-	this->objects = *new thrust::host_vector<Object>();
+	this->objects = *new std::vector<Object>();
 
 	std::string line;
 	std::getline(in, line);
@@ -204,9 +512,9 @@ void Level::load_from(std::string path) {
 
 		HostModel* h_model = Runtime::find_host_model(model);
 
-		this->model_instances.push_back(create_instance(Runtime::find_host_model_index(model), position, rotation, Runtime::find_host_model(model)->get_triangle_count(), false));
+		Runtime::model_instances.push_back(create_instance(Runtime::find_host_model_index(model), position, rotation, Runtime::find_host_model(model)->get_triangle_count(), false));
 
-		std::cout << "d_model = " << this->model_instances.back().model_index << std::endl;
+		std::cout << "d_model = " << Runtime::model_instances.back().model_index << std::endl;
 
 		//d_Model d_model2 = Runtime::find_host_model(model)->to_gpu();
 
@@ -246,7 +554,7 @@ void Level::load_from(std::string path) {
 
 	d_AmbientLight amb_light = { glm::vec4(r, g, b, a), glm::vec4(s_r, s_g, s_b, s_a), intensity };
 
-	this->d_model_instance_count = static_cast<uint32_t>(this->model_instances.size());
+	this->d_model_instance_count = static_cast<uint32_t>(Runtime::model_instances.size());
 
 	this->d_point_lights_count = static_cast<uint32_t>(point_lights.size());
 
@@ -254,97 +562,27 @@ void Level::load_from(std::string path) {
 	std::istringstream in3(line);
 	size_t object_count;
 	in3 >> object_count;
-	std::cout << object_count << " objects detected!" << std::endl;
+	std::cout << std::setw(10) << object_count << " objects detected!" << std::endl;
 	bool has_player = false;
+	this->objects = *new std::vector<Object>();
 	for (size_t i = 0; i < object_count; i++) {
 		std::getline(in, line);
 		std::istringstream in_obj(line);
-		uint32_t type;
+		uint32_t type = 0;
 		float x, y, z, x_d, y_d, z_d;
 		std::string visual_model, rigid_model;
 
-		in_obj >> type >> x >> y >> z >> x_d >> y_d >> z_d >> visual_model;
+		in_obj >> x >> y >> z >> x_d >> y_d >> z_d >> visual_model;
 
 		ObjectType obj_type = ObjectType::AI;
-		std::cout << "Type " << type << std::endl;
+		//std::cout << "Type " << type << std::endl;
 
 		d_ModelInstance instance;
 		uint32_t model_idx = 0, instance_idx = 0, hitbox_index = 0;
 
-		if (type == 0) {
-
-			obj_type = ObjectType::AI;
-
-			instance = create_instance(Runtime::find_host_model_index(visual_model), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model(visual_model)->get_triangle_count(), false);
-
-			this->model_instances.push_back(instance);
-
-			model_idx = Runtime::find_host_model_index(visual_model);
-			instance_idx = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			this->model_instances.push_back(create_instance(Runtime::find_host_model_index("player_hitbox.txt"), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model("player_hitbox.txt")->get_triangle_count(), true));
-
-			hitbox_index = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			this->add_object(Object(obj_type, glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), model_idx, instance_idx, hitbox_index));
-		}
-		else if (type == 1) {
-			obj_type = ObjectType::Physics;
-			instance = create_instance(Runtime::find_host_model_index(visual_model), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model(visual_model)->get_triangle_count(), false);
-
-			this->model_instances.push_back(instance);
-
-			this->model_instances.push_back(create_instance(Runtime::find_host_model_index(visual_model), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model(visual_model)->get_triangle_count(), true));
-
-			hitbox_index = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			model_idx = Runtime::find_host_model_index(visual_model);
-			instance_idx = static_cast<uint32_t>(this->model_instances.size() - 1);
-			this->add_object(Object(obj_type, glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), model_idx, instance_idx, hitbox_index));
-		}
-		else if (type == 2 && !has_player) {
-			has_player = true;
-			obj_type = ObjectType::Player;
-
-			instance = create_instance(Runtime::find_host_model_index(visual_model), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model(visual_model)->get_triangle_count(), false);
-
-			this->model_instances.push_back(instance);
-
-			model_idx = Runtime::find_host_model_index(visual_model);
-			instance_idx = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			this->model_instances.push_back(create_instance(Runtime::find_host_model_index("player_hitbox.txt"), glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model("player_hitbox.txt")->get_triangle_count(), true));
-
-			hitbox_index = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			Object obj(obj_type, glm::vec3(x, y, z), glm::vec3(x_d, y_d, z_d), 0, 0, hitbox_index);
-			obj.attach_camera(this->camera_ptr);
-			obj.set_health(100.0f);
-			this->add_object(obj);
-
-			this->PLAYER_OBJECT = new Object(ObjectType::Player, glm::vec3(0.0f, 0.0f, 0.0f));
-			this->PLAYER_OBJECT = &this->objects[this->objects.size() - 1];
-		}
-		else if (type == 3) {
-			obj_type = ObjectType::Weapon;
-
-
-			instance = create_instance(Runtime::find_host_model_index(visual_model), this->PLAYER_OBJECT->get_position(), glm::vec3(x_d, y_d, z_d), Runtime::find_host_model(visual_model)->get_triangle_count(), false);
-
-			model_idx = Runtime::find_host_model_index(visual_model);
-
-			this->model_instances.push_back(instance);
-
-			instance_idx = static_cast<uint32_t>(this->model_instances.size() - 1);
-
-			Object obj(obj_type, this->PLAYER_OBJECT->get_position(), this->PLAYER_OBJECT->get_direction(), model_idx, instance_idx, hitbox_index);
-
-			obj.set_weapon_offset(glm::vec3(x, y, z));
-			obj.set_in_inventory(false);
-			obj.set_in_use(false);
-
-			this->add_object(obj);
-		}
+		this->objects.push_back(Runtime::OBJECTS[Runtime::find_object_index(visual_model)]);
+		this->objects.back().set_position(glm::vec3(x, y, z));
+		this->objects.back().set_direction(glm::vec3(x_d, y_d, z_d));
 
 		std::cout << "Object added: " << &this->objects.back() << " @ " << this->objects.back().get_model_index() << " index with model " << visual_model << " of type " << this->objects.back().get_object_type() << std::endl;
 	}
@@ -392,7 +630,7 @@ Application::Application(int32_t dimx, int32_t dimy) {
 		std::cout << "Cannot open asset database! : " << sqlite3_errmsg(this->database_connection) << std::endl;
 		return;
 	}
-
+	Runtime::model_instances = *new std::vector<d_ModelInstance>();
 	Runtime::runtime_load(this->database_connection);
 	Runtime::load_objects(this->database_connection);
 	Runtime::load_weapons(this->database_connection);
@@ -529,7 +767,7 @@ void Application::main_loop() {
 		Object* obj = this->level->get_objects_ptr();
 		//std::cout << "Updating " << this->level->get_object_count() << " objects in world!" << std::endl;
 		for (size_t i = 0; i < this->level->get_object_count(); i++) {
-			obj[i].update(&this->level->get_model_instances()[obj[i].get_instance_index()], &this->level->get_model_instances()[obj[i].get_hitbox_instance_index()], this->camera, glfwGetTime() - this->camera->get_last_time(), this->win, this->level->get_player_object());
+			obj[i].update(&Runtime::model_instances[obj[i].get_instance_index()], &Runtime::model_instances[obj[i].get_hitbox_instance_index()], this->camera, glfwGetTime() - this->camera->get_last_time(), this->win, Runtime::PLAYER_OBJECT);
 			if (obj[i].get_object_type() == ObjectType::Player && obj[i].get_health() <= 0.0f) {
 				std::cout << "Game Over" << std::endl;
 				this->loop = false;
@@ -578,7 +816,83 @@ void Application::main_loop() {
 	glfwTerminate();
 }
 
+void Level::add_model_instance(d_ModelInstance inst) {
+	Runtime::model_instances.push_back(inst);
+}
 
+void Level::update_instance(uint32_t index, d_ModelInstance model) {
+	Runtime::model_instances[index] = model;
+}
+
+void Level::update_object(uint32_t index, Object object) {
+	this->objects[index] = object;
+
+	d_ModelInstance instance = Runtime::model_instances[this->objects[index].get_instance_index()];
+	instance.position = this->objects[index].get_position();
+	instance.rotation = this->objects[index].get_direction();
+	this->update_instance(this->objects[index].get_instance_index(), instance);
+}
+
+void Level::upload_instances() {
+	error_check(cudaMalloc((void**)&this->d_model_instances, sizeof(d_ModelInstance) * Runtime::model_instances.size()));
+	error_check(cudaMemcpy(this->d_model_instances, Runtime::model_instances.data(), sizeof(d_ModelInstance) * Runtime::model_instances.size(), cudaMemcpyHostToDevice));
+	cudaDeviceSynchronize();
+	this->d_model_instance_count = static_cast<uint32_t>(Runtime::model_instances.size());
+}
+
+void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance, Camera* cam, float t, GLFWwindow* win, Object* player) {
+	//std::cout << "updating object" << std::endl;
+	float to_player, time;
+	if (this->object_type == ObjectType::AI) {
+		//std::cout << "	updating as AI" << std::endl;
+		this->target_position = player->get_position();
+		this->direction = glm::normalize(this->target_position - this->position);
+		this->position += this->direction * t * 5.0f;
+		instances->position = this->position;
+		instances->rotation = this->direction;
+
+		glm::vec3 dist = this->target_position - this->position;
+		to_player = dist.length();
+		printf("Distance to player = %.2f, %.2f, %.2f\n", dist.x, dist.y, dist.z);
+
+		hitbox_instance->position = this->position;
+		hitbox_instance->rotation = this->direction;
+
+		time = glfwGetTime();
+		if (to_player <= this->attack_range) {
+			std::cout << std::setw(10) << "AI Within Attack Range" << std::endl;
+			if (time - this->last_attack >= this->attack_cooldown) {
+				player->set_health(player->get_health() - this->current_damage);
+				this->last_attack = time;
+				std::cout << "AI Attacking Player" << std::endl;
+			}
+		}
+	}
+
+	else if (this->object_type == ObjectType::Player) {
+		//std::cout << "	updating as Player" << std::endl;
+		double x, y;
+		glfwGetCursorPos(win, &x, &y);
+		cam->add_to_euler_direction(glm::vec2(static_cast<float>(x), static_cast<float>(y)));
+		glfwSetCursorPos(win, cam->get_dims().x * 0.5f, cam->get_dims().y * 0.5f);
+		this->direction = cam->get_direction();
+		this->position = cam->get_position();
+		Runtime::PLAYER_OBJECT = this;
+
+		hitbox_instance->position = this->position;
+		hitbox_instance->rotation = this->direction;
+	}
+
+	else if (this->object_type == ObjectType::Weapon) {
+		//std::cout << "	updating as Weapon" << std::endl;
+		uint32_t inst_idx = Runtime::WEAPONS[this->obj_indices.weapon_index].get_instance_index();
+
+		d_ModelInstance* d_mi = &Runtime::model_instances[inst_idx];
+
+		d_mi->position = Runtime::PLAYER_OBJECT->get_position() + Runtime::WEAPONS[this->obj_indices.weapon_index].get_offset();
+		d_mi->rotation = Runtime::PLAYER_OBJECT->get_direction();
+	}
+}
 
 HostModel* Runtime::find_host_model(std::string name) {
 	for (uint32_t i = 0; i < HOST_MODELS.size(); i++) {

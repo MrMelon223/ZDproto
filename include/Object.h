@@ -11,6 +11,12 @@ enum ObjectType {
 	Weapon
 };
 
+union ObjIndexs {
+	uint32_t physics_object_index;
+	uint32_t player_index;
+	uint32_t weapon_index;
+};
+
 class Object {
 protected:
 	glm::vec3 spawn_point;
@@ -38,18 +44,15 @@ protected:
 	float attack_cooldown;
 		// Player Variable(s)
 	Camera* camera_ptr;
-		// Weapon Variables
-	float walk_speed;
-	float run_speed;
-	glm::vec3 weapon_offset;
-	bool in_inventory, in_use;
-	std::string weapon_name;
 
+	std::string name;
+
+	ObjIndexs obj_indices;
 
 public:
 	Object();
 	Object(ObjectType, glm::vec3);
-	Object(ObjectType, glm::vec3, glm::vec3, uint32_t, uint32_t, uint32_t);
+	Object(ObjectType, ObjIndexs, std::string, glm::vec3, glm::vec3, uint32_t, uint32_t, uint32_t);
 
 	void bind_model(uint32_t model) { this->model_index = model;}
 
@@ -86,23 +89,8 @@ public:
 
 	float get_attack_cooldown() { return this->attack_cooldown; }
 
-	void set_walk_speed(float s) { this->walk_speed = s; }
-	float get_walk_speed() { return this->walk_speed; }
-
-	void set_run_speed(float s) { this->run_speed = s; }
-	float get_run_speed() { return this->run_speed; }
-
-	void set_weapon_offset(glm::vec3 p) { this->weapon_offset = p; }
-	glm::vec3 get_weapon_offset() { return this->weapon_offset; }
-
-	void set_in_inventory(bool b) { this->in_inventory = b; }
-	bool get_in_inventory() { return this->in_inventory; }
-
-	void set_in_use(bool b) { this->in_use = b; }
-	bool get_in_use() { return this->in_use; }
-
-	void set_weapon_name(std::string s) { this->weapon_name = s; }
-	std::string get_weapon_name() { return this->weapon_name; }
+	void set_name(std::string n) { this->name = n; }
+	std::string get_name() { return this->name; }
 
 };
 

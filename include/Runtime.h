@@ -5,16 +5,18 @@
 #include "Weapon.h"
 #include "Object.h"
 #include "Model.h"
+#include "Level.cuh"
 
 extern std::vector<HostModel> HOST_MODELS;
 extern std::vector<d_Model> DEVICE_MODELS;
 
-
-extern Object* PLAYER_OBJECT;
-
 namespace Runtime {
+	extern Object* PLAYER_OBJECT;
+
 	extern std::vector<Object> OBJECTS;
 	extern std::vector<BulletWeapon> WEAPONS;
+
+	extern std::vector<d_ModelInstance> model_instances;
 
 	void runtime_load(sqlite3*);
 	void load_objects(sqlite3*);
@@ -23,6 +25,11 @@ namespace Runtime {
 	bool host_models_contains(std::string);
 	HostModel* find_host_model(std::string);
 	uint32_t find_host_model_index(std::string);
+
+	Object* find_object(std::string);
+	uint32_t find_object_index(std::string);
+
+	uint32_t find_weapon_index(std::string);
 
 		// Controls
 	static bool KEY_USED = false;

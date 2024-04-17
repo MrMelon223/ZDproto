@@ -72,30 +72,6 @@ Level::Level(std::string path, Camera* cam) {
 	this->load_from(path);
 }
 
-void Level::add_model_instance(d_ModelInstance inst) {
-	this->model_instances.push_back(inst);
-}
-
-void Level::update_instance(uint32_t index, d_ModelInstance model) {
-	this->model_instances[index] =  model;
-}
-
-void Level::update_object(uint32_t index, Object object) {
-	this->objects[index] = object;
-
-	d_ModelInstance instance = this->model_instances[this->objects[index].get_instance_index()];
-	instance.position = this->objects[index].get_position();
-	instance.rotation = this->objects[index].get_direction();
-	this->update_instance(this->objects[index].get_instance_index(), instance);
-}
-
-void Level::upload_instances() {
-	error_check(cudaMalloc((void**)&this->d_model_instances, sizeof(d_ModelInstance) * this->model_instances.size()));
-	error_check(cudaMemcpy(this->d_model_instances, this->model_instances.data(), sizeof(d_ModelInstance) * this->model_instances.size(), cudaMemcpyHostToDevice));
-	cudaDeviceSynchronize();
-	this->d_model_instance_count = static_cast<uint32_t>(this->model_instances.size());
-}
-
 void Level::add_object(Object obj) {
 	this->objects.push_back(obj);
 }
