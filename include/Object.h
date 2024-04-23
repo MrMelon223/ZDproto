@@ -3,12 +3,14 @@
 
 #include "Model.h"
 #include "Camera.h"
+#include "Weapon.h"
 
 enum ObjectType {
 	AI,
 	Physics,
 	Player,
-	Weapon
+	Weapon,
+	Static
 };
 
 union ObjIndexs {
@@ -24,6 +26,7 @@ protected:
 	glm::vec3 position;
 	glm::vec3 rotation;
 	glm::vec3 direction;
+	float mass_kg;
 
 	ObjectType object_type;
 
@@ -36,7 +39,7 @@ protected:
 
 		// AI object variables
 	glm::vec3 target_position;
-	float current_health;
+	float current_health, max_health;
 	float attack_range;
 	float current_damage;
 
@@ -45,14 +48,21 @@ protected:
 		// Player Variable(s)
 	Camera* camera_ptr;
 
+	BulletWeapon* primary;
+
 	std::string name;
 
 	ObjIndexs obj_indices;
+
+	float creation_time;
 
 public:
 	Object();
 	Object(ObjectType, glm::vec3);
 	Object(ObjectType, ObjIndexs, std::string, glm::vec3, glm::vec3, uint32_t, uint32_t, uint32_t);
+
+	void set_primary_weapon(BulletWeapon* w) { this->primary = w; }
+	BulletWeapon* get_current_weapon() { return this->primary; }
 
 	void bind_model(uint32_t model) { this->model_index = model;}
 
@@ -72,6 +82,7 @@ public:
 
 	void update(d_ModelInstance*, d_ModelInstance*, Camera*, float, GLFWwindow*, Object*);
 
+	void set_max_health(float h) { this->max_health = h; }
 	void set_health(float h) { this->current_health = h; }
 	float get_health() { return this->current_health; }
 	__device__ __host__
@@ -82,6 +93,7 @@ public:
 	float get_current_damage() { return this->current_damage; }
 	float get_attack_range() { return this->attack_range; }
 
+	void set_spawn_point(glm::vec3 p) { this->spawn_point = p; }
 	glm::vec3 get_spawn_point() { return this->spawn_point; }
 
 	float get_last_attack_time() { return this->last_attack; }
@@ -92,6 +104,8 @@ public:
 	void set_name(std::string n) { this->name = n; }
 	std::string get_name() { return this->name; }
 
+	void set_mass(float m) { this->mass_kg = m; }
+	float get_mass() { return this->mass_kg; }
 };
 
 #endif

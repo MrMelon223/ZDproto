@@ -7,7 +7,7 @@
 #include "Object.h"
 
 __global__
-void test_intersection(glm::vec3, glm::vec3, Object*, uint32_t, d_ModelInstance*, uint32_t, d_Model*, bool*);
+void test_intersection(glm::vec3, glm::vec3, Object*, uint32_t, d_ModelInstance*, uint32_t, d_Model*, bool*, float*);
 
 class Level {
 protected:

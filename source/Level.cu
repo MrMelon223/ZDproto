@@ -2,7 +2,7 @@
 #include "../include/Level.cuh"
 
 __global__
-void test_intersection(glm::vec3 position, glm::vec3 direction, Object* objects, uint32_t object_count, d_ModelInstance* instances, uint32_t instance_count, d_Model* models, bool* intersected) {
+void test_intersection(glm::vec3 position, glm::vec3 direction, Object* objects, uint32_t object_count, d_ModelInstance* instances, uint32_t instance_count, d_Model* models, bool* intersected, float* distances) {
 	int j = blockDim.y * blockIdx.y + threadIdx.y,
 		i = blockDim.x * blockIdx.x + threadIdx.x,
 		x = (j * 128 + i);
@@ -21,6 +21,7 @@ void test_intersection(glm::vec3 position, glm::vec3 direction, Object* objects,
 			uint32_t vert_count = *model.vertex_count;
 			Tri* tris = model.triangles;
 			float closest = 100.0f;
+			float scale = instance->scale;
 			int32_t r = -1;
 			//printf("Model index = %i\n", instance->model_index);
 			//printf("Triangle count = %i\n", *model.triangle_count);
@@ -32,7 +33,7 @@ void test_intersection(glm::vec3 position, glm::vec3 direction, Object* objects,
 				//printf("Triangle %i = {%i, %i, %i} out of vertex %i, out of triangle %i\n", k, t->a, t->b, t->c, vert_count, *model.triangle_count);
 				Vertex* a = &verts[tris[k].a], * b = &verts[tris[k].b], * c = &verts[tris[k].c];
 
-				if (glm::intersectRayTriangle(position, direction, a->position + offset, b->position + offset, c->position + offset, uv, dist)) {
+				if (glm::intersectRayTriangle(position, direction, scale * a->position + offset, scale* b->position + offset, scale * c->position + offset, uv, dist)) {
 					//printf("Ray Intersected Triangle %i from object %i\n", k, idx);
 					if (dist <= closest) {
 						r = static_cast<int32_t>(k);
@@ -45,6 +46,7 @@ void test_intersection(glm::vec3 position, glm::vec3 direction, Object* objects,
 			}
 			if (r != -1) {
 				intersected[idx] = true;
+				distances[idx] = closest;
 				//printf("Intersection on object %i!\n", idx);
 			}
 			else {

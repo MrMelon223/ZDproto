@@ -12,17 +12,16 @@ std::vector<d_ModelInstance> Runtime::model_instances;
 
 int sql_callback(void* p_data, int num_fields, char** p_fields, char** p_col_names)
 {
-	try {
-		std::cout << "     Loading Assets" << std::endl;
-		for (size_t i = 0; i < num_fields; i++) {
-			HOST_MODELS.push_back(HostModel(p_fields[i]));
-			DEVICE_MODELS.push_back(HOST_MODELS.back().to_gpu());
-		}
-	}
+	//try {
+		std::cout << "Fields: " << num_fields << std::endl;
+		std::cout << "     Loading Asset " << p_fields[0] << std::endl;
+		HOST_MODELS.push_back(HostModel(std::string(p_fields[0])));
+		DEVICE_MODELS.push_back(HOST_MODELS.back().to_gpu());
+	/* }
 	catch (...) {
 		// abort select on failure, don't let exception propogate thru sqlite3 call-stack
 		return 1;
-	}
+	}*/
 	return 0;
 }
 
@@ -47,7 +46,6 @@ int sql_callback_object(void* p_data, int num_fields, char** p_fields, char** p_
 {
 	try {
 		std::cout << "	Objects:" << std::endl;
-		for (size_t h = 0; h < num_fields / 6; h++) {
 			Object o;
 
 			std::string obj_name, vis_model_name, hitbox_model_name;
@@ -55,8 +53,8 @@ int sql_callback_object(void* p_data, int num_fields, char** p_fields, char** p_
 			float mass_kg;
 			int bullet_coll;
 
-			for (size_t i = 0; i < 6; i++) {
-				char* str = p_fields[h * 6 + i];
+			for (size_t i = 0; i < num_fields; i++) {
+				char* str = p_fields[i];
 				std::istringstream in(str);
 
 				switch (i) {
@@ -86,61 +84,80 @@ int sql_callback_object(void* p_data, int num_fields, char** p_fields, char** p_
 			if (obj_type == 0) {
 				ObjIndexs obj_idx;
 
-				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false, 1.0f);
 				Runtime::model_instances.push_back(d_mi);
 				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true, 1.0f);
 				Runtime::model_instances.push_back(d_hitbox);
 				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
 
 				obj_idx.physics_object_index = Runtime::OBJECTS.size() - 1;
 				o = Object(ObjectType::AI, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f),Runtime::find_host_model_index(vis_model_name),  d_mi_idx, d_hitbox_idx);
+				o.set_mass(mass_kg);
+				o.set_max_health(100.0f);
+				o.set_health(100.0f);
 			}
 			else if (obj_type == 1) {
 				ObjIndexs obj_idx;
 
-				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false, 1.0f);
 				Runtime::model_instances.push_back(d_mi);
 				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true, 1.0f);
 				Runtime::model_instances.push_back(d_hitbox);
 				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
 
 				obj_idx.physics_object_index = Runtime::OBJECTS.size() - 1;
 				o = Object(ObjectType::Physics, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+				o.set_mass(mass_kg);
 			}
 			else if (obj_type == 2) {
 				ObjIndexs obj_idx;
 
-				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false, 1.0f);
 				Runtime::model_instances.push_back(d_mi);
 				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true, 1.0f);
 				Runtime::model_instances.push_back(d_hitbox);
 				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
 
 				obj_idx.player_index = 0;
 				o = Object(ObjectType::Player, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+				o.set_mass(mass_kg);
 			}
 			else if (obj_type == 3) {
 				ObjIndexs obj_idx;
 
-				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false);
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false, 0.001f);
 				Runtime::model_instances.push_back(d_mi);
 				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), false);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true, 0.001f);
 				Runtime::model_instances.push_back(d_hitbox);
 				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
 
 				obj_idx.weapon_index= Runtime::find_weapon_index("Default Weapon");
-				o = Object(ObjectType::Player, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+				o = Object(ObjectType::Weapon, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+				o.set_mass(mass_kg);
+			}
+			else if (obj_type == 4) {
+				ObjIndexs obj_idx;
+
+				d_ModelInstance d_mi = create_instance(Runtime::find_host_model_index(vis_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(vis_model_name)->get_triangle_count(), false, 1.0f);
+				Runtime::model_instances.push_back(d_mi);
+				uint32_t d_mi_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+				d_ModelInstance d_hitbox = create_instance(Runtime::find_host_model_index(hitbox_model_name), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(hitbox_model_name)->get_triangle_count(), true, 1.0f);
+				Runtime::model_instances.push_back(d_hitbox);
+				uint32_t d_hitbox_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+				obj_idx.physics_object_index = Runtime::OBJECTS.size() - 1;
+				o = Object(ObjectType::Static, obj_idx, obj_name, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model_index(vis_model_name), d_mi_idx, d_hitbox_idx);
+				o.set_mass(mass_kg);
 			}
 			Runtime::OBJECTS.push_back(o);
 
 			if (o.get_object_type() == ObjectType::Player) {
 				Runtime::PLAYER_OBJECT = &Runtime::OBJECTS[Runtime::OBJECTS.size() - 1];
 			}
-		}
 	}
 	catch (...) {
 		// abort select on failure, don't let exception propogate thru sqlite3 call-stack
@@ -339,7 +356,7 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 
 						model_index = Runtime::find_host_model_index(model_name);
 
-						d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false);
+						d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 1.0f);
 						Runtime::model_instances.push_back(d_m);
 
 						inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
@@ -428,7 +445,7 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 
 							model_index = Runtime::find_host_model_index(model_name);
 
-							d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false);
+							d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 0.1f);
 							Runtime::model_instances.push_back(d_m);
 
 							inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
@@ -440,6 +457,7 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 					}
 				}
 			w.set_offset(glm::vec3(0.25f, 0.25f, 0.25f));
+
 			Runtime::WEAPONS.push_back(w);
 		}
 		
@@ -512,7 +530,7 @@ void Level::load_from(std::string path) {
 
 		HostModel* h_model = Runtime::find_host_model(model);
 
-		Runtime::model_instances.push_back(create_instance(Runtime::find_host_model_index(model), position, rotation, Runtime::find_host_model(model)->get_triangle_count(), false));
+		Runtime::model_instances.push_back(create_instance(Runtime::find_host_model_index(model), position, rotation, Runtime::find_host_model(model)->get_triangle_count(), false, 1.0f));
 
 		std::cout << "d_model = " << Runtime::model_instances.back().model_index << std::endl;
 
@@ -583,6 +601,10 @@ void Level::load_from(std::string path) {
 		this->objects.push_back(Runtime::OBJECTS[Runtime::find_object_index(visual_model)]);
 		this->objects.back().set_position(glm::vec3(x, y, z));
 		this->objects.back().set_direction(glm::vec3(x_d, y_d, z_d));
+
+		this->add_model_instance(create_instance(this->objects.back().get_model_index(), this->objects.back().get_position(), this->objects.back().get_direction(), HOST_MODELS[this->objects.back().get_model_index()].get_triangle_count(), false, 1.0f));
+		this->objects.back().set_instance_index(static_cast<uint32_t>(Runtime::model_instances.size() - 1));
+		this->objects.back().set_spawn_point(glm::vec3(x, y, z));
 
 		std::cout << "Object added: " << &this->objects.back() << " @ " << this->objects.back().get_model_index() << " index with model " << visual_model << " of type " << this->objects.back().get_object_type() << std::endl;
 	}
@@ -715,28 +737,55 @@ void Application::mouse_handle() {
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			glm::vec3 fire_direction = this->camera->get_direction();
 
-			bool* intersection_tests = new bool[this->level->get_object_count()], * d_intersection_tests;
-			error_check(cudaMalloc((void**)&d_intersection_tests, this->level->get_object_count() * sizeof(bool)), "Application::mouse_handle cudaMalloc");
-			//std::cout << this->level->get_d_object_count() << " Objects going in @ " << this->level->get_d_objects() << std::endl;
-			test_intersection << <(this->level->get_d_object_count() / 128) + 1, 128 >> > (this->camera->get_position(), fire_direction, this->level->get_d_objects(), this->level->get_d_object_count(), this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), d_intersection_tests);
-			cudaDeviceSynchronize();
-			error_check(cudaGetLastError(), "Application::mouse_handle kernel call");
-
-			error_check(cudaMemcpy(intersection_tests, d_intersection_tests, this->level->get_object_count() * sizeof(bool), cudaMemcpyDeviceToHost), "Application::mouse_handle cudaMemcpy");
-
-			for (size_t i = 0; i < this->level->get_object_count(); i++) {
-				if (intersection_tests[i]) {
-					Object objs = this->level->get_objects_ptr()[i];
-					objs.set_health(objs.get_health() - 25.0f);
-					if (objs.get_health() <= 0.0f) {
-						objs.set_position(objs.get_spawn_point());
-						objs.set_health(50.0f);
+			BulletWeapon* current_weapon = Runtime::PLAYER_OBJECT->get_current_weapon();
+			bool fire = false;
+			switch (current_weapon->get_weapon_type()) {
+				case WeaponType::SemiAutomatic:
+					if (glfwGetTime() - this->camera->get_last_time() >= current_weapon->get_fire_delay()) {
+						fire = true;
 					}
-					this->level->update_object(static_cast<uint32_t>(i), objs);
-				}
+					break;
+				case WeaponType::FullyAutomatic:
+					if (glfwGetTime() - this->camera->get_last_time() >= current_weapon->get_fire_delay()) {
+						fire = true;
+					}
+					break;
 			}
 
-			error_check(cudaFree(d_intersection_tests));
+			if (fire) {
+
+				std::cout << "Shooting!" << std::endl;
+
+				bool* intersection_tests = new bool[this->level->get_object_count()], * d_intersection_tests;
+				float* distances = new float[this->level->get_object_count()], * d_distances;
+				error_check(cudaMalloc((void**)&d_intersection_tests, this->level->get_object_count() * sizeof(bool)), "Application::mouse_handle cudaMalloc1");
+				error_check(cudaMalloc((void**)&d_distances, this->level->get_object_count() * sizeof(float)), "Application::mouse_handle cudaMalloc2");
+				//std::cout << this->level->get_d_object_count() << " Objects going in @ " << this->level->get_d_objects() << std::endl;
+				test_intersection << <(this->level->get_d_object_count() / 128) + 1, 128 >> > (this->camera->get_position(), fire_direction, this->level->get_d_objects(), this->level->get_d_object_count(), this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), d_intersection_tests, d_distances);
+				cudaDeviceSynchronize();
+				error_check(cudaGetLastError(), "Application::mouse_handle kernel call");
+
+				error_check(cudaMemcpy(intersection_tests, d_intersection_tests, this->level->get_object_count() * sizeof(bool), cudaMemcpyDeviceToHost), "Application::mouse_handle cudaMemcpy1");
+				error_check(cudaMemcpy(distances, d_distances, this->level->get_object_count() * sizeof(float), cudaMemcpyDeviceToHost), "Application::mouse_handle cudaMemcpy2");
+				float closest = 1000.0f;
+				int32_t index = -1;
+				for (size_t i = 0; i < this->level->get_object_count(); i++) {
+					if (intersection_tests[i]) {
+						if (distances[i] < closest) {
+							index = static_cast<int32_t>(i);
+						}
+					}
+				}
+				if (index != -1) {
+					std::cout << "Damaging object " << index << std::endl;
+					Object objs = this->level->get_objects_ptr()[index];
+					objs.set_health(objs.get_health() - 25.0f);
+					this->level->update_object(static_cast<uint32_t>(index), objs);
+				}
+
+				error_check(cudaFree(d_intersection_tests));
+				error_check(cudaFree(d_distances));
+			}
 		}
 		break;
 
@@ -748,6 +797,10 @@ void Application::main_loop() {
 	glfwSetKeyCallback(this->win, keyboard_callback);
 	glfwSetMouseButtonCallback(this->win, mouse_callback);
 	glfwMakeContextCurrent(this->win);
+
+	//this->camera->set_position(Runtime::PLAYER_OBJECT->get_position());
+
+	Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")]);
 
 	int frame_count = 0;
 	while (this->loop && !glfwWindowShouldClose(this->win)) {
@@ -768,10 +821,10 @@ void Application::main_loop() {
 		//std::cout << "Updating " << this->level->get_object_count() << " objects in world!" << std::endl;
 		for (size_t i = 0; i < this->level->get_object_count(); i++) {
 			obj[i].update(&Runtime::model_instances[obj[i].get_instance_index()], &Runtime::model_instances[obj[i].get_hitbox_instance_index()], this->camera, glfwGetTime() - this->camera->get_last_time(), this->win, Runtime::PLAYER_OBJECT);
-			if (obj[i].get_object_type() == ObjectType::Player && obj[i].get_health() <= 0.0f) {
+			/*if (obj[i].get_object_type() == ObjectType::Player && obj[i].get_health() <= 0.0f) {
 				std::cout << "Game Over" << std::endl;
 				this->loop = false;
-			}
+			}*/
 		}
 
 		if (frame_count != 0) {
@@ -840,6 +893,25 @@ void Level::upload_instances() {
 	this->d_model_instance_count = static_cast<uint32_t>(Runtime::model_instances.size());
 }
 
+Object::Object(ObjectType type, ObjIndexs idxs, std::string name, glm::vec3 position, glm::vec3 direction, uint32_t model, uint32_t instance, uint32_t hitbox_instance) {
+	this->name = name;
+	this->position = position;
+	this->spawn_point = position;
+	this->direction = direction;
+	this->object_type = type;
+	this->rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+
+	this->model_index = model;
+	this->instance_index = instance;
+	this->hitbox_instance_index = hitbox_instance;
+
+	this->obj_indices = idxs;
+
+	this->creation_time = glfwGetTime();
+
+	this->primary = &Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")];
+}
+
 void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance, Camera* cam, float t, GLFWwindow* win, Object* player) {
 	//std::cout << "updating object" << std::endl;
 	float to_player, time;
@@ -867,6 +939,10 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 				std::cout << "AI Attacking Player" << std::endl;
 			}
 		}
+		if (this->current_health <= 0.0f) {
+			this->position = this->spawn_point;
+			this->current_health = max_health;
+		}
 	}
 
 	else if (this->object_type == ObjectType::Player) {
@@ -881,16 +957,30 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 
 		hitbox_instance->position = this->position;
 		hitbox_instance->rotation = this->direction;
+
+		Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[0]);
+
+		d_ModelInstance* d_wpn = &Runtime::model_instances[Runtime::PLAYER_OBJECT->get_current_weapon()->get_instance_index()];
+		//d_wpn->position = this->position + this->primary->get_offset();
+		//d_wpn->rotation = this->direction;
+		//instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
 	}
 
 	else if (this->object_type == ObjectType::Weapon) {
 		//std::cout << "	updating as Weapon" << std::endl;
 		uint32_t inst_idx = Runtime::WEAPONS[this->obj_indices.weapon_index].get_instance_index();
-
+		BulletWeapon* wpn = &Runtime::WEAPONS[this->obj_indices.weapon_index];
 		d_ModelInstance* d_mi = &Runtime::model_instances[inst_idx];
 
-		d_mi->position = Runtime::PLAYER_OBJECT->get_position() + Runtime::WEAPONS[this->obj_indices.weapon_index].get_offset();
-		d_mi->rotation = Runtime::PLAYER_OBJECT->get_direction();
+		//d_mi->position = Runtime::PLAYER_OBJECT->get_position() + Runtime::WEAPONS[this->obj_indices.weapon_index].get_offset();
+		//d_mi->rotation = Runtime::PLAYER_OBJECT->get_direction();
+	}
+
+	else if (this->object_type == ObjectType::Physics) {
+		float delta_time = this->creation_time - time;
+
+		this->position -= glm::vec3(0.0f, -9.81 * delta_time * delta_time, 0.0f);
+		instances[this->instance_index].position = this->position;
 	}
 }
 

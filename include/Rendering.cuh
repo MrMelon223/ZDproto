@@ -9,6 +9,9 @@ __device__
 void transform();
 
 __device__
+bool ray_intersects_box(glm::vec3, glm::vec3, glm::vec3&, glm::vec3&, int&);
+
+__device__
 glm::vec4 sample_texture(glm::vec4*, glm::ivec2, float, float);
 
 __device__
