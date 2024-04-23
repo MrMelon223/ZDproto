@@ -33,35 +33,33 @@ glm::vec3 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0,
 
 __device__
 bool ray_intersects_box(glm::vec3 position, glm::vec3 direction, glm::vec3& box_min, glm::vec3& box_max, int& towards) {
+
 	glm::vec3 invDirection = 1.0f / direction;
-	glm::vec3 tMin = (box_min - position) * invDirection;
-	glm::vec3 tMax = (box_max - position) * invDirection;
 
-	glm::vec3 tEnter = glm::min(tMin, tMax);
-	glm::vec3 tExit = glm::max(tMin, tMax);
+	// Calculate intersection distances
+	glm::vec3 t1 = (box_min - position) * invDirection;
+	glm::vec3 t2 = (box_max - position) * invDirection;
 
-	float tEnterMax = glm::max(glm::max(tEnter.x, tEnter.y), tEnter.z);
-	float tExitMin = glm::min(glm::min(tExit.x, tExit.y), tExit.z);
+	// Find the maximum and minimum of these intersection distances
+	glm::vec3 tMin = glm::min(t1, t2);
+	glm::vec3 tMax = glm::max(t1, t2);
 
-	bool intersects = tEnterMax <= tExitMin;
+	float tNear = glm::max(glm::max(tMin.x, tMin.y), tMin.z);
+	float tFar = glm::min(glm::min(tMax.x, tMax.y), tMax.z);
 
-	glm::vec3 closest;
-
-	if (intersects) {
-		closest = (position + tEnterMax * direction) - box_min;
-		towards = -1;
-
-		if (closest.length() > ((position + tEnterMax * direction) - box_max).length()) {
-			closest = (position + tEnterMax * direction) - box_max;
+	if (tFar >= tNear) {
+		if (tNear >= 0.0f) {
 			towards = 1;
+		}
+		else {
+			towards = -1;
 		}
 	}
 	else {
 		towards = 0;
 	}
-
-
-	return intersects;
+	
+	return tFar >= tNear;
 }
 
 __device__
@@ -196,37 +194,39 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 				uint32_t next = 0;
 				d_Model* model = &models[g->model_index];
 				bool went_back_and_checked = false;
+				BVHNode* node = &model->bvh.nodes[model->bvh.initial];
 				for (uint32_t n = 0; n < models[g->model_index].bvh.layers; n++) {
 					bool cont = false;
 					if (n == 0 && !model->bvh.nodes[model->bvh.initial].volume.is_base && model->bvh.node_size > 1) {
 						//printf("BVH initial = %i for size %i\n", model->bvh.initial, model->bvh.node_size);
-						BVHNode* node = &model->bvh.nodes[model->bvh.initial];
 						glm::vec3 min = node->volume.vertices[0] + g->position, max = node->volume.vertices[1] + g->position;
 						int towards = 0;
 						bool vol_intersect = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 
 						if (vol_intersect && !node->volume.is_base) {
 							if (towards < 0) {
-								next = static_cast<uint32_t>(node->left_child_index);
+								next = model->bvh.nodes[model->bvh.initial].left_child_index;
 								//printf("Going left to %i\n", next);
 							}
 							else if (towards > 0) {
-								next = static_cast<uint32_t>(node->right_child_index);
+								next = model->bvh.nodes[model->bvh.initial].right_child_index;
 								//printf("Going right to %i\n", next);
 							}
 						}
-						else {
+						else if (node->volume.is_base) {
 							cont = true;
+
 						}
 					}
-					else { 
+					else {
 						cont = true;
 					}
 
 					if (cont) {
 						//printf("Next Node = %i out of %i nodes\n", next, model->bvh.node_size);
-						BVHNode* node = &model->bvh.nodes[next];
+						//BVHNode* node = &model->bvh.nodes[next];
 
+						bool intersect_test = false;
 						if (!node->volume.is_base) {
 							//printf("Left idx = %i, Right idx = %i\n", node->left_child_index, node->right_child_index);
 							BVHNode* left = &model->bvh.nodes[node->left_child_index],
@@ -236,129 +236,137 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 							int towards = 0, towards_right = 0;
 							bool vol_intersect_a = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 							bool vol_intersect_b = ray_intersects_box(ray->position, ray->direction, min_right, max_right, towards_right);
-							if (vol_intersect_a && vol_intersect_b) {
-								BVHNode* a_left = &model->bvh.nodes[left->left_child_index], * a_right = &model->bvh.nodes[left->right_child_index],* b_left = &model->bvh.nodes[right->left_child_index],* b_right = &models->bvh.nodes[right->right_child_index];
-								glm::vec3 min_a_l = a_left->volume.vertices[0] + g->position, max_a_l = a_left->volume.vertices[1] + g->position;
-								glm::vec3 min_a_r = a_right->volume.vertices[0] + g->position, max_a_r = a_right->volume.vertices[1] + g->position;
-								int a_l_towards = 0, a_r_towards = 0;
-								bool collide_a_l = ray_intersects_box(ray->position, ray->direction, min_a_l, max_a_l, a_l_towards);
-								bool collide_a_r = ray_intersects_box(ray->position, ray->direction, min_a_r, max_a_r, a_r_towards);
+							if (vol_intersect_a && vol_intersect_b)
 
-								glm::vec3 min_b_l = b_left->volume.vertices[0] + g->position, max_b_l = b_left->volume.vertices[1] + g->position;
-								glm::vec3 min_b_r = b_right->volume.vertices[0] + g->position, max_b_r = b_right->volume.vertices[1] + g->position;
-								int b_l_towards = 0, b_r_towards = 0;
-								bool collide_b_l = ray_intersects_box(ray->position, ray->direction, min_b_l, max_a_l, b_l_towards);
-								bool collide_b_r = ray_intersects_box(ray->position, ray->direction, min_b_r, max_b_r, b_r_towards);
-
-								if (collide_a_l || collide_a_r) {
-									vol_intersect_a = true;
-								}
-								if (collide_b_l || collide_b_r) {
+								if (towards_right > 0) {
+									vol_intersect_a = false;
 									vol_intersect_b = true;
 								}
+								else if (towards_right < 0) {
+									vol_intersect_a = true;
+									vol_intersect_b = false;
+								}
 
+
+							/*glm::vec3 min_a_l = a_left->volume.vertices[0] + g->position, max_a_l = a_left->volume.vertices[1] + g->position;
+							glm::vec3 min_a_r = a_right->volume.vertices[0] + g->position, max_a_r = a_right->volume.vertices[1] + g->position;
+							int a_l_towards = 0, a_r_towards = 0;
+							bool collide_a_l = ray_intersects_box(ray->position, ray->direction, min_a_l, max_a_l, a_l_towards);
+							bool collide_a_r = ray_intersects_box(ray->position, ray->direction, min_a_r, max_a_r, a_r_towards);
+
+							glm::vec3 min_b_l = b_left->volume.vertices[0] + g->position, max_b_l = b_left->volume.vertices[1] + g->position;
+							glm::vec3 min_b_r = b_right->volume.vertices[0] + g->position, max_b_r = b_right->volume.vertices[1] + g->position;
+							int b_l_towards = 0, b_r_towards = 0;
+							bool collide_b_l = ray_intersects_box(ray->position, ray->direction, min_b_l, max_a_l, b_l_towards);
+							bool collide_b_r = ray_intersects_box(ray->position, ray->direction, min_b_r, max_b_r, b_r_towards);
+
+							if (collide_a_l || collide_a_r) {
+								vol_intersect_a = true;
 							}
-							if (vol_intersect_b) {
-								next = static_cast<uint32_t>(node->right_child_index);
-								//printf("Going B, left to %i\n", next);
-							}
-							else if (vol_intersect_a) {
-								next = static_cast<uint32_t>(node->left_child_index);
-							}
-							else if (!vol_intersect_a && !vol_intersect_b) {
+							if (collide_b_l || collide_b_r) {
+								vol_intersect_b = true;
+							}*/
+							if (!vol_intersect_a && !vol_intersect_b) {
 								/*if (next == node->left_child_index) {
 									next = node->right_child_index;
 								}
 								else if (next == node->right_child_index) {
 									next = node->left_child_index;
 								}*/
-								continue;
 								//printf("BVH going nowhere\n");
+								goto contin;
+								//printf("BVH going nowhere\n");
+								//continue;
 							}
 						}
-						else {
-							//printf("Node is base w/ %i triangles!\n", node->volume.triangle_count);
+						node = &model->bvh.nodes[next];
+					}
+					if (node->volume.is_base) {
+						//printf("Node is base w/ %i triangles!\n", node->volume.triangle_count);
 
-							for (uint32_t p = 0; p < static_cast<uint32_t>(node->volume.triangle_count); p++) {
-								tried = true;
-								//printf("Checking Triangle %i\n", node->volume.triangles[p]);
-								//printf("Before Grabbing Triangle %i!\n", node->volume.triangles[p]);
-								Tri* t = &model->triangles[node->volume.triangles[p]];
-								//printf("After grabbing triangle!\n");
-								Vertex* vs = model->vertices;
-								glm::vec3 offset = instances[j1].position;
-								glm::vec3 direction = instances[j1].rotation;
+						for (uint32_t p = 0; p < static_cast<uint32_t>(node->volume.triangle_count); p++) {
+							tried = true;
+							//printf("Checking Triangle %i\n", node->volume.triangles[p]);
+							//printf("Before Grabbing Triangle %i!\n", node->volume.triangles[p]);
+							Tri* t = &model->triangles[node->volume.triangles[p]];
+							//printf("After grabbing triangle!\n");
+							Vertex* vs = model->vertices;
+							glm::vec3 offset = instances[j1].position;
+							glm::vec3 direction = instances[j1].rotation;
 
-								glm::vec2 intersection;
-								float d;
-								glm::vec2 uv;
-								bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, scale * vs[t->a].position + offset, scale * vs[t->b].position + offset, scale * vs[t->c].position + offset, uv, d);
-								if (intersection_detection) {
-									glm::vec3 intersect = (d * direction) + position;
-									float tr = d;//(intersect - position).length();
-									if (tr < last_leng && tr >= 0.001f) {
-										//printf("Intersection true for model %i!\n", g->model_index);
+							glm::vec2 intersection;
+							float d;
+							glm::vec2 uv;
+							bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, scale * vs[t->a].position + offset, scale * vs[t->b].position + offset, scale * vs[t->c].position + offset, uv, d);
+							if (intersection_detection) {
+								glm::vec3 intersect = (d * direction) + position;
+								float tr = d;//(intersect - position).length();
+								if (tr < last_leng && tr >= 0.01f) {
+									//printf("Intersection true for model %i!\n", g->model_index);
 
-										intersect = ray->position + tr * ray->direction;
-										glm::vec3 diff = intersect - position;
+									intersect = ray->position + tr * ray->direction;
+									glm::vec3 diff = intersect - position;
 
-										//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
+									//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
 
-										glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
+									glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
-										glm::mat3 a_inv = glm::inverse(a);
-										glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
+									glm::mat3 a_inv = glm::inverse(a);
+									glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
 
-										//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
+									//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
 
-										//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
-										uv = uv;
-										//uv = glm::vec2(barycentric.x, barycentric.y);
+									//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
+									uv = uv;
+									//uv = glm::vec2(barycentric.x, barycentric.y);
 
-										//uv /= 10.0f;
+									//uv /= 10.0f;
 
-										uv = glm::clamp(uv, 0.0f, 1.0f);
+									uv = glm::clamp(uv, 0.0f, 1.0f);
 
-										//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
-										ray->payload.color = glm::vec4(1.0f);
-										ray->payload.intersection = intersect;
-										ray->payload.uv = uv;
-										ray->intersected = true;
-										ray->payload.model = model;
-										ray->payload.triangle = t;
-										intersected = true;
-										last_leng = tr;
-									}
-									//break;
+									//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
+									ray->payload.color = glm::vec4(1.0f);
+									ray->payload.intersection = intersect;
+									ray->payload.uv = uv;
+									ray->intersected = true;
+									ray->payload.model = model;
+									ray->payload.triangle = t;
+									intersected = true;
+									last_leng = tr;
 								}
-								/*else if (!went_back_and_checked && model->bvh.node_size != 1) {
-									went_back_and_checked = true;
-									if (next == node->left_child_index) {
-										next = node->right_child_index;
-									}
-									else if (next == node->right_child_index) {
-										next = node->left_child_index;
-									}
-									n -= 2;
-								}
-								if (history_idx >= 16) {
-									history[history_idx - 1] = next;
-
-								}
-								else {
-									history[history_idx] = next;
-									history_idx++;
-								}*/
+								//break;
 							}
+							/*else if (!went_back_and_checked && model->bvh.node_size != 1) {
+								went_back_and_checked = true;
+								if (next == node->left_child_index) {
+									next = node->right_child_index;
+								}
+								else if (next == node->right_child_index) {
+									next = node->left_child_index;
+								}
+								n -= 2;
+							}
+							if (history_idx >= 16) {
+								history[history_idx - 1] = next;
+
+							}
+							else {
+								history[history_idx] = next;
+								history_idx++;
+							}*/
 						}
 					}
-
 				}
 			}
+			else {
+				continue;
+			}
 			if (!intersected) {
-				ray->payload.color = glm::vec4(0.65f, 0.42f, 0.21f, 1.0f);
+				ray->payload.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 				ray->intersected = false;
 			}
+		contin:;
+			continue;
 		}
 	}
 }
@@ -374,7 +382,7 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 	out[idx] = glm::vec4(0.0f);
 
 	Ray* ray = &rays[idx];
-	if (ray->intersected) {
+	if (ray->intersected && ray->payload.model != NULL) {
 		glm::vec3 result = glm::vec3(0.0f);
 		glm::vec4 diffuse_color = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
 
@@ -396,10 +404,9 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 		}
 
 		out[idx] += glm::vec4(result, 1.0f);
-
 	}
 	else {
-		out[idx] = glm::vec4(0.65f, 0.32f, 0.21f, 1.0f);
+		out[idx] = glm::vec4(0.32f, 0.32f, 0.21f, 1.0f);
 	}
 }
 

@@ -147,7 +147,7 @@ int32_t bvh_layer_count(size_t volume_count) {
 	int32_t layer_count = 1;
 	int32_t v_count = static_cast<int32_t>(volume_count);
 	int32_t last = v_count;
-	while (v_count > 1) {
+	while (v_count > 2) {
 		v_count -= last / 2;
 		last = v_count;
 		layer_count++;
@@ -160,14 +160,18 @@ BVH::BVH() {
 }
 
 uint32_t find_closest(Tri* t, std::vector<Vertex> verts, std::vector<Tri> tris, bool* used, int cur_idx) {
-	glm::vec3 center = (verts[t->a].position + verts[t->b].position + verts[t->c].position) * 0.333f;
+	glm::vec3 center = (verts[t->a].position + verts[t->b].position + verts[t->c].position) / 3.0f;
 
 	float closest = 100000.0f;
 	int32_t tracker = 0, ret = -1;
-	for (size_t i = 0; i < tris.size(); i++) {
+	for (size_t i = cur_idx; i < tris.size(); i++) {
+		/*if (used[i && i != cur_idx]) {
+			ret = i;
+			break;
+		}*/
 		Tri tr = tris[i];
 		if (!used[i] && i != cur_idx) {
-			glm::vec3 center_test = (verts[tr.a].position + verts[tr.b].position + verts[tr.c].position) * 0.333f;
+			glm::vec3 center_test = (verts[tr.a].position + verts[tr.b].position + verts[tr.c].position) / 3.0f;
 			if (ret == -1) {
 				ret == i;
 			}
@@ -175,7 +179,6 @@ uint32_t find_closest(Tri* t, std::vector<Vertex> verts, std::vector<Tri> tris, 
 				ret = i;
 			}
 		}
-		tracker++;
 	}
 	return ret;
 }
@@ -217,7 +220,7 @@ BVH::BVH(HostModel* model) {
 			used[i] = false;
 		}
 
-		uint32_t idx = 0;
+		int32_t idx = 0;
 		size_t count = 0;
 		int32_t remaining = static_cast<uint32_t>(tris.size());
 
@@ -227,14 +230,16 @@ BVH::BVH(HostModel* model) {
 			//std::cout << "Remaining: " << remaining << std::endl;
 			BoundingVolume vol = {};
 
-			used[idx] = true;
+
 			bool none_found = false;
 			int cap = -1;
 			for (uint32_t j = 0; j < BVH_TRIANGLE_COUNT; j++) {
-				int found = find_closest(&tris[idx], verts, tris, used, count * BVH_TRIANGLE_COUNT + j);
+				used[idx] = true;
+				int found = find_closest(&tris[idx], verts, tris, used, idx);
 				if (found >= 0) {
 					vol.triangles[j] = static_cast<uint32_t>(found);
 					used[vol.triangles[j]] = true;
+					idx = found;
 					//printf("Triangle found = %i\n", vol.triangles[j]);
 				}
 				else {
@@ -242,6 +247,7 @@ BVH::BVH(HostModel* model) {
 					for (int32_t k = 0; k < tris.size(); k++) {
 						if (!used[k]) {
 							next = k;
+							idx = next;
 						}
 					}
 					if (next == -1) {
@@ -294,9 +300,9 @@ BVH::BVH(HostModel* model) {
 	int32_t running_total = 0;
 	if (this->nodes.size() > 1) {
 		for (int32_t n = 1; n < this->layers; n++) {
-			std::cout << "Layering tree for iteration " << n << std::endl;
-			last = (last / 2);
-			for (int32_t i = 0; i < last; i++) {
+			//std::cout << "Layering tree for iteration " << n << std::endl;
+			last = static_cast<int32_t>(static_cast<float>(last) * 0.5f);
+			for (int32_t i = 1; i < last; i++) {
 				BVHNode* n1 = &this->nodes[running_total],
 					* n2 = &this->nodes[running_total + 1];
 
@@ -315,20 +321,37 @@ BVH::BVH(HostModel* model) {
 				BVHNode n3 = {};
 				n3.volume = vol;
 				vol.is_top = false;
-				if (last == 1) {
-					n3.left_child_index = static_cast<uint32_t>(running_total);
-					n3.right_child_index = static_cast<uint32_t>(-1);
-				}
-				else {
-					n3.left_child_index = static_cast<uint32_t>(running_total);
-					n3.right_child_index = static_cast<uint32_t>(running_total + 1);
-				}
+				n3.left_child_index = static_cast<int32_t>(running_total);
+				n3.right_child_index = static_cast<int32_t>(running_total + 1);
 
 				printf("Children indexs = %i,%i\n", n3.left_child_index, n3.right_child_index);
 
 				this->nodes.push_back(n3);
 				running_total += 2;
 			}
+			BVHNode* n1 = &this->nodes[running_total],
+				* n2 = &this->nodes[running_total + 1];
+
+			glm::vec3 n1_min = n1->volume.vertices[0],
+				n1_max = n1->volume.vertices[1];
+			glm::vec3 n2_min = n2->volume.vertices[0],
+				n2_max = n2->volume.vertices[1];
+
+			glm::vec3 min = glm::min(n1_min, n2_min), max = glm::max(n1_max, n2_max);
+
+			BoundingVolume vol{};
+			vol.is_base = false;
+			vol.vertices[0] = min;
+			vol.vertices[1] = max;
+
+			BVHNode n3 = {};
+			n3.volume = vol;
+			vol.is_top = false;
+			n3.left_child_index = static_cast<int32_t>(running_total);
+			n3.right_child_index = static_cast<int32_t>(running_total + 1);
+
+			this->nodes.push_back(n3);
+
 		}
 		this->nodes.back().volume.is_top = true;
 	}
@@ -349,7 +372,7 @@ d_BVH BVH::to_gpu() {
 void BVH::debug_print() {
 	for (BVHNode n : this->nodes) {
 		printf("Node left = %i, Node right = %i\n", n.left_child_index, n.right_child_index);
-		for (int32_t i = 0; i < n.volume.triangle_count; i++) {
+		for (uint32_t i = 0; i < n.volume.triangle_count; i++) {
 			printf("     Tri %i = %i\n", i, n.volume.triangles[i]);
 		}
 	}

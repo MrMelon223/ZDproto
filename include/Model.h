@@ -8,7 +8,7 @@ struct d_Model;
 class HostModel;
 
 __device__
-const int BVH_TRIANGLE_COUNT = 16;
+const int BVH_TRIANGLE_COUNT = 32;
 
 struct BoundingVolume {
 	uint32_t triangles[BVH_TRIANGLE_COUNT];
