@@ -72,7 +72,7 @@ void HostModel::load_from(std::string path) {
 		uint32_t x, y, z, w;
 		in3 >> x >> y >> z;
 
-		std::cout << "Triangle idxs = { " << x << ", " << y << ", " << z << " }" << std::endl;
+		//std::cout << "Triangle idxs = { " << x << ", " << y << ", " << z << " }" << std::endl;
 
 		glm::vec3 t_norm = glm::cross(this->vertices.at(x).position - this->vertices.at(y).position, this->vertices.at(x).position - this->vertices.at(z).position),
 			norm_w = (this->vertices.at(x).normal + this->vertices.at(y).normal + this->vertices.at(z).normal) / 3.0f;
@@ -82,7 +82,7 @@ void HostModel::load_from(std::string path) {
 
 		this->triangles.push_back(Tri{ x, y, z, t_norm * norm_w});
 	}
-	this->color_map = Texture("resources/textures/default.png");
+	this->color_map = Texture("resources/textures/checkerboard.png");
 
 	in.close();
 }
@@ -95,7 +95,7 @@ HostModel::HostModel(std::string path) {
 	this->load_from(path);
 
 	this->bvh = BVH(this);
-	this->bvh.debug_print();
+	//this->bvh.debug_print();
 }
 
 d_Model HostModel::to_gpu() {
@@ -175,7 +175,7 @@ uint32_t find_closest(Tri* t, std::vector<Vertex> verts, std::vector<Tri> tris, 
 			if (ret == -1) {
 				ret == i;
 			}
-			if ((center_test - center).length() < closest) {
+			if (glm::length(center_test - center) < closest) {
 				ret = i;
 			}
 		}
@@ -186,23 +186,28 @@ uint32_t find_closest(Tri* t, std::vector<Vertex> verts, std::vector<Tri> tris, 
 BVH::BVH(HostModel* model) {
 	std::vector<Vertex> verts = *model->get_vertices();
 	std::vector<Tri> tris = *model->get_triangles();
-	if (tris.size() < BVH_TRIANGLE_COUNT) {
+	//if (tris.size() < BVH_TRIANGLE_COUNT) {
 			BoundingVolume vol = {};
-			//vol.triangles = (Tri**)malloc(BVH_TRIANGLE_COUNT * sizeof(uint32_t));
+			uint32_t* tri_idxs =  (uint32_t*)malloc(tris.size() * sizeof(uint32_t));
 			for (uint32_t j = 0; j < tris.size(); j++) {
-				vol.triangles[j] = j;
+				tri_idxs[j] = j;
 			}
-			vol.triangle_count = static_cast<uint8_t>(tris.size());
 
-			glm::vec3 min, max = min = verts.at(tris.at(vol.triangles[0]).a).position;
-			for (uint8_t j = 1; j < vol.triangle_count; j++) {
-				Tri* t = &tris.at(vol.triangles[j]);
+			error_check(cudaMalloc((void**)&vol.triangles, tris.size() * sizeof(uint32_t)));
+			error_check(cudaMemcpy(vol.triangles, tri_idxs, tris.size() * sizeof(uint32_t), cudaMemcpyHostToDevice));
+			vol.triangle_count = static_cast<uint32_t>(tris.size());
+
+			glm::vec3 min, max = min = verts.at(tris.at(tri_idxs[0]).a).position;
+			for (uint32_t j = 1; j < vol.triangle_count; j++) {
+				Tri* t = &tris.at(tri_idxs[j]);
 				Vertex* va = &verts.at(t->a);
 				Vertex* vb = &verts.at(t->b);
 				Vertex* vc = &verts.at(t->c);
 				min = glm::min(min, glm::min(glm::min(va->position, vb->position), vc->position));
 				max = glm::max(min, glm::max(glm::max(va->position, vb->position), vc->position));
 			}
+
+			free(tri_idxs);
 
 			vol.vertices[0] = glm::vec3(min);
 			vol.vertices[1] = glm::vec3(max);
@@ -211,8 +216,8 @@ BVH::BVH(HostModel* model) {
 			BVHNode node = { vol, -1, -1 };
 
 			this->nodes.push_back(node);
-	}
-	else {
+	//}
+	/*else {
 		bool* used = new bool[tris.size()];
 
 
@@ -293,13 +298,13 @@ BVH::BVH(HostModel* model) {
 			count++;
 		}
 		delete[] used;
-	}
-	this->layers = bvh_layer_count(this->nodes.size());
+	}*/
+	/*this->layers = bvh_layer_count(this->nodes.size());
 	//std::cout << "Need Layers #" << this->layers << std::endl;
 	int32_t last = static_cast<int32_t>(this->nodes.size());
 	int32_t running_total = 0;
 	if (this->nodes.size() > 1) {
-		for (int32_t n = 1; n < this->layers; n++) {
+		while(static_cast<float>(last) * 0.5f > 1.0f) {
 			//std::cout << "Layering tree for iteration " << n << std::endl;
 			last = static_cast<int32_t>(static_cast<float>(last) * 0.5f);
 			for (int32_t i = 1; i < last; i++) {
@@ -354,7 +359,7 @@ BVH::BVH(HostModel* model) {
 
 		}
 		this->nodes.back().volume.is_top = true;
-	}
+	}*/
 }
 
 d_BVH BVH::to_gpu() {
@@ -362,8 +367,9 @@ d_BVH BVH::to_gpu() {
 	error_check(cudaMalloc((void**)&d_bvh.nodes, sizeof(BVHNode) * this->nodes.size()));
 	error_check(cudaMemcpy(d_bvh.nodes, this->nodes.data(), sizeof(BVHNode) * this->nodes.size(), cudaMemcpyHostToDevice));
 	printf("BVH Node count = %i\n", this->nodes.size());
-	d_bvh.initial = static_cast<uint32_t>(this->nodes.size() - 1);
-	d_bvh.layers = this->layers;
+	d_bvh.initial = 0;//static_cast<uint32_t>(this->nodes.size() - 1);
+	//d_bvh.layers = this->layers;
+	d_bvh.layers = 1;
 	d_bvh.node_size = static_cast<uint32_t>(this->nodes.size());
 
 	return d_bvh;

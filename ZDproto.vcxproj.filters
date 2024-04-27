@@ -57,6 +57,9 @@
     <ClInclude Include="include\Weapon.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\Crosshair.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cu">

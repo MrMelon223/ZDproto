@@ -19,6 +19,12 @@ union ObjIndexs {
 	uint32_t weapon_index;
 };
 
+enum PlayerState {
+	Walking,
+	Running,
+	Idle
+};
+
 class Object {
 protected:
 	glm::vec3 spawn_point;
@@ -49,6 +55,8 @@ protected:
 	Camera* camera_ptr;
 
 	BulletWeapon* primary;
+
+	PlayerState player_state;
 
 	std::string name;
 
@@ -106,6 +114,9 @@ public:
 
 	void set_mass(float m) { this->mass_kg = m; }
 	float get_mass() { return this->mass_kg; }
+
+	void set_player_state(PlayerState s) { this->player_state = s; }
+	PlayerState get_player_state() { return this->player_state; }
 };
 
 #endif

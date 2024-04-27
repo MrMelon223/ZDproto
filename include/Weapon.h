@@ -2,6 +2,7 @@
 #define WEAPON_H
 
 #include "Model.h"
+#include "Crosshair.h"
 
 enum class WeaponType {
 	SemiAutomatic,
@@ -24,6 +25,10 @@ protected:
 	uint32_t instance_index;
 
 	bool in_use, in_inventory;
+
+	float last_fire;
+
+	Crosshair crosshair;
 
 public:
 	BulletWeapon();
@@ -51,6 +56,11 @@ public:
 
 	void set_offset(glm::vec3 o) { this->offset = o; }
 	glm::vec3 get_offset() { return this->offset; }
+
+	float get_last_fire() { return this->last_fire; }
+	void set_last_fire(float f) { this->last_fire = f; }
+
+	Crosshair get_crosshair() { return this->crosshair; }
 
 };
 

@@ -9,7 +9,7 @@ static const uint32_t MAX_BOUNCE_COUNT = 1;
 class Camera {
 protected:
 	glm::ivec2 dims;
-	glm::vec2 fov;
+	glm::vec2 fov, current_fov;
 
 	glm::vec3 position;
 	glm::vec3 euler_direction, direction;
@@ -51,6 +51,10 @@ public:
 	void set_last_time(float t) { this->last_time = t; }
 
 	void debug_print();
+
+	glm::vec2 get_current_fov() { return this->current_fov; }
+	void set_current_fov(glm::vec2 f) { this->current_fov = f; }
+	glm::vec2 get_fov() { return this->fov; }
 };
 
 #endif

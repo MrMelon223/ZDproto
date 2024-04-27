@@ -447,7 +447,6 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 
 							d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 0.1f);
 							Runtime::model_instances.push_back(d_m);
-
 							inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
 
 							w.set_instance_index(inst_idx);
@@ -456,7 +455,6 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 						std::cout << str << std::endl;
 					}
 				}
-			w.set_offset(glm::vec3(0.25f, 0.25f, 0.25f));
 
 			Runtime::WEAPONS.push_back(w);
 		}
@@ -669,7 +667,7 @@ Application::Application(int32_t dimx, int32_t dimy) {
 	glm::vec3 init_position = glm::vec3(10.0f, 10.0f, 0.0f);
 	glm::vec3 init_direction = glm::vec3(0.0f, 0.0f, 0.0f);
 
-	this->camera = new Camera(this->dims, 120.0f, init_position, init_direction);
+	this->camera = new Camera(this->dims, 100.0f, init_position, init_direction);
 
 	this->level = new Level("resources/levels/test_level.txt", this->camera);
 
@@ -681,59 +679,122 @@ Application::Application(int32_t dimx, int32_t dimy) {
 
 void Application::input_handle() {
 	std::cout << Runtime::CURRENT_KEY << std::endl;
+
+	this->is_walking = false, this->is_sprinting = false, this->trying_sprint = false;;
 	switch (Runtime::CURRENT_KEY) {
 	case GLFW_KEY_W:
-		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT || Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
+		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			this->camera->forward(glfwGetTime() - this->camera->get_last_time());
+			is_walking = true;
 		}
 		break;
 	case GLFW_KEY_S:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			this->camera->backward(glfwGetTime() - this->camera->get_last_time());
+			is_walking = true;
 		}
 		break;
 	case GLFW_KEY_A:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			this->camera->left(glfwGetTime() - this->camera->get_last_time());
+			is_walking = true;
 		}
 		break;
 	case GLFW_KEY_D:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			this->camera->right(glfwGetTime() - this->camera->get_last_time());
+			is_walking = true;
 		}
 		break;
 	case GLFW_KEY_R:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			//this->cam->set_capture_mode(RT);
 		}
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		break;
 	case GLFW_KEY_F:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			//this->camera->set_capture_mode(FULLBRIGHT);
 		}
 		break;
 	case GLFW_KEY_ESCAPE:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			this->loop = false;
 		}
 		break;
 	case GLFW_KEY_P:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			//this->cam->get_rays(0)->debug_stats();
 		}
 		break;
 	case GLFW_MOUSE_BUTTON_LEFT:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_key();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 
 		}
 		break;
 	}
+
+	if (this->is_walking && this->trying_sprint) {
+		this->is_sprinting = true;
+		Runtime::PLAYER_OBJECT->set_player_state(PlayerState::Running);
+	}
+	else if (this->is_walking) {
+		Runtime::PLAYER_OBJECT->set_player_state(PlayerState::Walking);
+	}
+	else {
+		Runtime::PLAYER_OBJECT->set_player_state(PlayerState::Idle);
+	}
+
+
 }
 
 void Application::mouse_handle() {
 
 	switch (Runtime::CURRENT_MOUSE) {
+	case GLFW_MOUSE_BUTTON_RIGHT:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			this->camera->set_current_fov(this->camera->get_fov());
+			Runtime::control::reset_mouse();
+		}
+		if (Runtime::CURRENT_ACTION == GLFW_PRESS) {
+			BulletWeapon* current_weapon = Runtime::PLAYER_OBJECT->get_current_weapon();
+
+			this->camera->set_current_fov(glm::vec2(65.0f, 95.0f));
+		}
+		break;
 	case GLFW_MOUSE_BUTTON_LEFT:
+		if (Runtime::CURRENT_ACTION == GLFW_RELEASE) {
+			Runtime::control::reset_mouse();
+		}
 		if (Runtime::CURRENT_ACTION == GLFW_PRESS || Runtime::CURRENT_ACTION == GLFW_REPEAT) {
 			glm::vec3 fire_direction = this->camera->get_direction();
 
@@ -741,12 +802,12 @@ void Application::mouse_handle() {
 			bool fire = false;
 			switch (current_weapon->get_weapon_type()) {
 				case WeaponType::SemiAutomatic:
-					if (glfwGetTime() - this->camera->get_last_time() >= current_weapon->get_fire_delay()) {
+					if (glfwGetTime() - current_weapon->get_last_fire() >= current_weapon->get_fire_delay()) {
 						fire = true;
 					}
 					break;
 				case WeaponType::FullyAutomatic:
-					if (glfwGetTime() - this->camera->get_last_time() >= current_weapon->get_fire_delay()) {
+					if (glfwGetTime() - current_weapon->get_last_fire() >= current_weapon->get_fire_delay()) {
 						fire = true;
 					}
 					break;
@@ -779,12 +840,14 @@ void Application::mouse_handle() {
 				if (index != -1) {
 					std::cout << "Damaging object " << index << std::endl;
 					Object objs = this->level->get_objects_ptr()[index];
-					objs.set_health(objs.get_health() - 25.0f);
+					objs.set_health(objs.get_health() - current_weapon->get_base_damage());
 					this->level->update_object(static_cast<uint32_t>(index), objs);
 				}
 
 				error_check(cudaFree(d_intersection_tests));
 				error_check(cudaFree(d_distances));
+
+				current_weapon->set_last_fire(glfwGetTime());
 			}
 		}
 		break;
@@ -819,6 +882,14 @@ void Application::main_loop() {
 
 		Object* obj = this->level->get_objects_ptr();
 		//std::cout << "Updating " << this->level->get_object_count() << " objects in world!" << std::endl;
+		if (Runtime::KEY_USED) {
+			this->input_handle();
+			//Runtime::control::reset_key();
+		}
+		if (Runtime::MOUSE_USED) {
+			this->mouse_handle();
+			//Runtime::control::reset_mouse();
+		}
 		for (size_t i = 0; i < this->level->get_object_count(); i++) {
 			obj[i].update(&Runtime::model_instances[obj[i].get_instance_index()], &Runtime::model_instances[obj[i].get_hitbox_instance_index()], this->camera, glfwGetTime() - this->camera->get_last_time(), this->win, Runtime::PLAYER_OBJECT);
 			/*if (obj[i].get_object_type() == ObjectType::Player && obj[i].get_health() <= 0.0f) {
@@ -834,22 +905,12 @@ void Application::main_loop() {
 		this->level->upload_objects();
 		this->level->upload_instances();
 
-		if (Runtime::KEY_USED) {
-			this->input_handle();
-			Runtime::control::reset_key();
-		}
-		if (Runtime::MOUSE_USED) {
-			this->mouse_handle();
-			Runtime::control::reset_mouse();
-		}
-
 		// Render functions
 		this->camera->capture(this->level->get_d_model_instances(), this->level->get_d_model_instance_count(), this->level->get_d_device_models(), this->level->get_d_ambient_light(), this->level->get_d_point_lights(), this->level->get_d_point_lights_size(), d_frame_buffer);
 
 		//this->camera->copy_to_frame_buffer(this->frame_buffer, 0);
 
 		error_check(cudaMemcpy(this->frame_buffer, d_frame_buffer, sizeof(glm::vec4) * this->dims.y * this->dims.x, cudaMemcpyDeviceToHost));
-
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glDrawPixels(this->dims.x, this->dims.y, GL_BGRA_EXT, GL_FLOAT, this->frame_buffer);
@@ -924,7 +985,7 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 		instances->rotation = this->direction;
 
 		glm::vec3 dist = this->target_position - this->position;
-		to_player = dist.length();
+		to_player = glm::length(dist);
 		printf("Distance to player = %.2f, %.2f, %.2f\n", dist.x, dist.y, dist.z);
 
 		hitbox_instance->position = this->position;
@@ -958,12 +1019,14 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 		hitbox_instance->position = this->position;
 		hitbox_instance->rotation = this->direction;
 
-		Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[0]);
+		Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")].set_offset(glm::vec3(0.025f, 0.0f, 0.025f));
+		Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")]);
 
 		d_ModelInstance* d_wpn = &Runtime::model_instances[Runtime::PLAYER_OBJECT->get_current_weapon()->get_instance_index()];
-		//d_wpn->position = this->position + this->primary->get_offset();
-		//d_wpn->rotation = this->direction;
-		//instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
+		d_wpn->scale = 0.01f;
+		d_wpn->position = this->position + this->primary->get_offset();
+		d_wpn->rotation = cam->get_direction();
+		instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
 	}
 
 	else if (this->object_type == ObjectType::Weapon) {
@@ -981,6 +1044,8 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 
 		this->position -= glm::vec3(0.0f, -9.81 * delta_time * delta_time, 0.0f);
 		instances[this->instance_index].position = this->position;
+
+
 	}
 }
 

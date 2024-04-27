@@ -10,7 +10,7 @@ Camera::Camera(glm::ivec2 dims, float fov) {
 Camera::Camera(glm::ivec2 dims, float fov, glm::vec3 position, glm::vec3 euler_direction) {
 	this->dims = dims;
 
-	this->fov = glm::vec2(fov, static_cast<float>(this->dims.x) / this->dims.y * fov);
+	this->fov = this->current_fov = glm::vec2(fov, static_cast<float>(this->dims.x) / this->dims.y * fov);
 
 	this->euler_direction = euler_direction;
 

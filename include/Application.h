@@ -17,7 +17,7 @@ protected:
 
 	//std::vector<FiniteStateMachine> ai;
 
-	bool loop;
+	bool loop, is_walking, trying_sprint, is_sprinting;
 
 	glm::vec4* frame_buffer;
 

@@ -1,6 +1,7 @@
 	// Rendering.cu
 #include "../include/Rendering.cuh"
 #include "../include/Camera.h"
+#include "../include/Runtime.h"
 
 __device__
 glm::vec4 interpolateColor3D(const glm::vec4& c1, const glm::vec4& c2, const glm::vec4& c3,
@@ -71,17 +72,24 @@ glm::vec4 sample_texture(glm::vec4* texture, glm::ivec2 dims, float x, float y) 
 }
 
 void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, d_AmbientLight* amb_light, d_PointLight* point_lights, uint32_t point_lights_size, glm::vec4* buffer) {
-	setup_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, this->d_ray_matrix[0], this->dims);
-	set_visible_tris << < (instance_count / 128) + 1, 128 >> > (this->position, this->direction, this->fov, models, instances, instance_count);
+	setup_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->current_fov.x, this->d_ray_matrix[0], this->dims);
+	set_visible_tris << < (instance_count / 128) + 1, 128 >> > (this->position, this->direction, this->current_fov, models, instances, instance_count);
 	cudaDeviceSynchronize();
 	for (uint8_t i = 0; i < MAX_BOUNCE_COUNT; i++) {
-		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
+		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->current_fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
 		cudaDeviceSynchronize();
 	}
 
 	//texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
 	calculate_lighting << < (this->dims.y * this->dims.x) / 128, 128 >> > (amb_light, point_lights, point_lights_size, this->d_ray_matrix[0], this->dims, buffer);
 	cudaDeviceSynchronize();
+
+	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Walking || Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Idle) {
+		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), false, true);
+	}
+	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Running) {
+		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), true, false);
+	}
 }
 
 __global__
@@ -191,8 +199,8 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 				//printf("ModelIndex = %i\n", g->model_index);
 				//printf("Model Index %i\n", g->model_index);
 				uint32_t c = *(models[g->model_index].triangle_count);
-				uint32_t next = 0;
 				d_Model* model = &models[g->model_index];
+				uint32_t next = model->bvh.initial;;
 				bool went_back_and_checked = false;
 				BVHNode* node = &model->bvh.nodes[model->bvh.initial];
 				for (uint32_t n = 0; n < models[g->model_index].bvh.layers; n++) {
@@ -203,22 +211,27 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 						int towards = 0;
 						bool vol_intersect = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 
-						if (vol_intersect && !node->volume.is_base) {
+						if (vol_intersect) {
+							cont = true;
+						}
+						/*if (vol_intersect && !node->volume.is_base) {
 							if (towards < 0) {
 								next = model->bvh.nodes[model->bvh.initial].left_child_index;
+								goto contin;
 								//printf("Going left to %i\n", next);
 							}
 							else if (towards > 0) {
 								next = model->bvh.nodes[model->bvh.initial].right_child_index;
+								goto contin;
 								//printf("Going right to %i\n", next);
 							}
 						}
 						else if (node->volume.is_base) {
 							cont = true;
 
-						}
+						}*/
 					}
-					else {
+					else if (model->bvh.nodes[model->bvh.initial].volume.is_base){
 						cont = true;
 					}
 
@@ -236,36 +249,48 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 							int towards = 0, towards_right = 0;
 							bool vol_intersect_a = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 							bool vol_intersect_b = ray_intersects_box(ray->position, ray->direction, min_right, max_right, towards_right);
-							if (vol_intersect_a && vol_intersect_b)
+							bool corrected = false;
+							if (vol_intersect_a && vol_intersect_b) {
 
+								if (towards > 0) {
+									vol_intersect_a = true;
+									vol_intersect_b = false;
+									next = left->right_child_index;
+									corrected = true;
+								}
+								else if (towards < 0) {
+									vol_intersect_a = true;
+									vol_intersect_b = false;
+									next = left->left_child_index;
+									corrected = true;
+								}
 								if (towards_right > 0) {
 									vol_intersect_a = false;
 									vol_intersect_b = true;
+									next = right->right_child_index;
+									corrected = true;
 								}
 								else if (towards_right < 0) {
-									vol_intersect_a = true;
-									vol_intersect_b = false;
+									vol_intersect_a = false;
+									vol_intersect_b = true;
+									next = right->left_child_index;
+									corrected = true;
 								}
 
-
-							/*glm::vec3 min_a_l = a_left->volume.vertices[0] + g->position, max_a_l = a_left->volume.vertices[1] + g->position;
-							glm::vec3 min_a_r = a_right->volume.vertices[0] + g->position, max_a_r = a_right->volume.vertices[1] + g->position;
-							int a_l_towards = 0, a_r_towards = 0;
-							bool collide_a_l = ray_intersects_box(ray->position, ray->direction, min_a_l, max_a_l, a_l_towards);
-							bool collide_a_r = ray_intersects_box(ray->position, ray->direction, min_a_r, max_a_r, a_r_towards);
-
-							glm::vec3 min_b_l = b_left->volume.vertices[0] + g->position, max_b_l = b_left->volume.vertices[1] + g->position;
-							glm::vec3 min_b_r = b_right->volume.vertices[0] + g->position, max_b_r = b_right->volume.vertices[1] + g->position;
-							int b_l_towards = 0, b_r_towards = 0;
-							bool collide_b_l = ray_intersects_box(ray->position, ray->direction, min_b_l, max_a_l, b_l_towards);
-							bool collide_b_r = ray_intersects_box(ray->position, ray->direction, min_b_r, max_b_r, b_r_towards);
-
-							if (collide_a_l || collide_a_r) {
-								vol_intersect_a = true;
+								if (corrected) {
+									n++;
+								}
 							}
-							if (collide_b_l || collide_b_r) {
-								vol_intersect_b = true;
-							}*/
+
+							if (vol_intersect_a && !corrected) {
+								next = node->left_child_index;
+							}
+							else if (vol_intersect_b && !corrected) {
+								next = node->right_child_index;
+							}
+							if (corrected) {
+								continue;
+							}
 							if (!vol_intersect_a && !vol_intersect_b) {
 								/*if (next == node->left_child_index) {
 									next = node->right_child_index;
@@ -279,83 +304,82 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 								//continue;
 							}
 						}
-						node = &model->bvh.nodes[next];
-					}
-					if (node->volume.is_base) {
-						//printf("Node is base w/ %i triangles!\n", node->volume.triangle_count);
+						if (node->volume.is_base) {
+							//printf("Node is base w/ %i triangles!\n", node->volume.triangle_count);
 
-						for (uint32_t p = 0; p < static_cast<uint32_t>(node->volume.triangle_count); p++) {
-							tried = true;
-							//printf("Checking Triangle %i\n", node->volume.triangles[p]);
-							//printf("Before Grabbing Triangle %i!\n", node->volume.triangles[p]);
-							Tri* t = &model->triangles[node->volume.triangles[p]];
-							//printf("After grabbing triangle!\n");
-							Vertex* vs = model->vertices;
-							glm::vec3 offset = instances[j1].position;
-							glm::vec3 direction = instances[j1].rotation;
+							for (uint32_t p = 0; p < static_cast<uint32_t>(node->volume.triangle_count); p++) {
+								tried = true;
+								//printf("Checking Triangle %i\n", node->volume.triangles[p]);
+								//printf("Before Grabbing Triangle %i!\n", node->volume.triangles[p]);
+								Tri* t = &model->triangles[node->volume.triangles[p]];
+								//printf("After grabbing triangle!\n");
+								Vertex* vs = model->vertices;
+								glm::vec3 offset = instances[j1].position;
+								glm::vec3 dir = instances[j1].rotation;
 
-							glm::vec2 intersection;
-							float d;
-							glm::vec2 uv;
-							bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, scale * vs[t->a].position + offset, scale * vs[t->b].position + offset, scale * vs[t->c].position + offset, uv, d);
-							if (intersection_detection) {
-								glm::vec3 intersect = (d * direction) + position;
-								float tr = d;//(intersect - position).length();
-								if (tr < last_leng && tr >= 0.01f) {
-									//printf("Intersection true for model %i!\n", g->model_index);
+								glm::vec2 intersection;
+								float d;
+								glm::vec2 uv;
 
-									intersect = ray->position + tr * ray->direction;
-									glm::vec3 diff = intersect - position;
+								glm::vec3 rotation_axis = glm::vec3(0.0f, 0.0f, 1.0f);
+								float angle = glm::acos(glm::dot(rotation_axis, rotation_axis));
+								glm::vec3 axis = glm::cross(rotation_axis, dir);
+								glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.0f), angle, dir);
 
-									//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
+								glm::vec4 verta4 = glm::vec4(scale * vs[t->a].position + offset, 1.0f) * rotation_matrix;
+								glm::vec3 verta = glm::vec3(verta4.x, verta4.y, verta4.z);
+								glm::vec4 vertb4 = glm::vec4(scale * vs[t->b].position + offset, 1.0f) * rotation_matrix;
+								glm::vec3 vertb = glm::vec3(vertb4.x, vertb4.y, vertb4.z);
+								glm::vec4 vertc4 = glm::vec4(scale * vs[t->c].position + offset, 1.0f) * rotation_matrix;
+								glm::vec3 vertc = glm::vec3(vertc4.x, vertc4.y, vertc4.z);
 
-									glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
-									glm::mat3 a_inv = glm::inverse(a);
-									glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
 
-									//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
+								bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, verta, vertb, vertc, uv, d);
+								if (intersection_detection) {
+									glm::vec3 intersect = (d * direction) + position;
+									float tr = d;//(intersect - position).length();
+									if (tr < last_leng && tr >= 0.01f) {
+										//printf("Intersection true for model %i!\n", g->model_index);
 
-									//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
-									uv = uv;
-									//uv = glm::vec2(barycentric.x, barycentric.y);
+										intersect = ray->position + tr * ray->direction;
+										glm::vec3 diff = intersect - position;
 
-									//uv /= 10.0f;
+										//bayo_coord = glm::clamp(bayo_coord, 0.0f, 1.0f);
 
-									uv = glm::clamp(uv, 0.0f, 1.0f);
+										glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
-									//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
-									ray->payload.color = glm::vec4(1.0f);
-									ray->payload.intersection = intersect;
-									ray->payload.uv = uv;
-									ray->intersected = true;
-									ray->payload.model = model;
-									ray->payload.triangle = t;
-									intersected = true;
-									last_leng = tr;
+										glm::mat3 a_inv = glm::inverse(a);
+										glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
+
+										//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
+
+										//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
+										uv = uv;
+										//uv = glm::vec2(barycentric.x, barycentric.y);
+
+										//uv /= 10.0f;
+
+										uv = glm::clamp(uv, 0.0f, 1.0f);
+
+										//printf("UV Coords: {%.2f, %.2f}\n", uv.x, uv.y);
+										ray->payload.color = glm::vec4(1.0f);
+										ray->payload.intersection = intersect;
+										ray->payload.uv = uv;
+										ray->intersected = true;
+										ray->payload.model = model;
+										ray->payload.triangle = t;
+										intersected = true;
+										last_leng = tr;
+									}
+									//break;
 								}
-								//break;
 							}
-							/*else if (!went_back_and_checked && model->bvh.node_size != 1) {
-								went_back_and_checked = true;
-								if (next == node->left_child_index) {
-									next = node->right_child_index;
-								}
-								else if (next == node->right_child_index) {
-									next = node->left_child_index;
-								}
-								n -= 2;
-							}
-							if (history_idx >= 16) {
-								history[history_idx - 1] = next;
-
-							}
-							else {
-								history[history_idx] = next;
-								history_idx++;
-							}*/
 						}
 					}
+				contin:;
+					node = &model->bvh.nodes[next];
+					continue;
 				}
 			}
 			else {
@@ -365,8 +389,6 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 				ray->payload.color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 				ray->intersected = false;
 			}
-		contin:;
-			continue;
 		}
 	}
 }
@@ -382,31 +404,37 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 	out[idx] = glm::vec4(0.0f);
 
 	Ray* ray = &rays[idx];
-	if (ray->intersected && ray->payload.model != NULL) {
+	if (ray->intersected) {
 		glm::vec3 result = glm::vec3(0.0f);
 		glm::vec4 diffuse_color = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
 
 		glm::vec4 lighting = glm::vec4(0.0f);
 		bool lit = false;
 		float cummulative_intensity = 0.0f;
+		//printf("Light Count = %i\n", static_cast<int>(lights_size));
 		for (int l = 0; l < static_cast<int>(lights_size); l++) {
 
-			float amb_strength = 0.1f;
-			glm::vec3 ambient = amb->intensity * amb->diffuse_color;
+			float amb_strength = 1.0f;
+			glm::vec3 ambient = amb->intensity * amb->diffuse_color * amb_strength;
 			glm::vec3 light_direction = lights[l].position - ray->payload.intersection;
-			float distance = light_direction.length();
-			float diff = glm::max(glm::dot(ray->payload.triangle->normal, light_direction), 0.0f);
-			float intensity = lights[l].intensity / (distance * distance);
-			glm::vec3 diffuse = intensity * lights[l].diffuse_color * diff;
+			float distance = glm::length(light_direction);
+			if (distance <= lights[l].range) {
+				float diff = glm::max(glm::dot(ray->payload.triangle->normal, light_direction), 0.0f);
+				float intensity = lights[l].intensity / (distance * distance);
+				glm::vec3 diffuse = intensity * lights[l].diffuse_color * diff;
 
-			result += (ambient + diffuse) * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
+				result += (ambient + diffuse) + diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
+
+				cummulative_intensity += intensity;
+			}
 
 		}
 
-		out[idx] += glm::vec4(result, 1.0f);
+		out[idx] = glm::vec4(result, 1.0f);
+		out[idx] = glm::clamp(out[idx], 0.0f, 1.0f);
 	}
 	else {
-		out[idx] = glm::vec4(0.32f, 0.32f, 0.21f, 1.0f);
+		out[idx] = glm::vec4(0.32f, 0.32f, 0.1f, 1.0f);
 	}
 }
 
@@ -424,5 +452,30 @@ void texture_map(Ray* rays, glm::ivec2 dims, glm::vec4* out) {
 	}
 	else {
 		out[idx] = ray->payload.color;
+	}
+}
+
+__global__
+void draw_crosshair(glm::ivec2 dims, glm::vec4* buffer, Crosshair cross, bool is_run, bool is_walk) {
+	int j = blockDim.y * blockIdx.y + threadIdx.y,
+		i = blockDim.x * blockIdx.x + threadIdx.x,
+		x = (j * 128 + i) % dims.x,
+		y = ((j * 128 + i) - x) / dims.x;
+	uint32_t idx = y * dims.x + x;
+
+	x += dims.x / 2;
+	y += dims.y / 2;
+
+	float f_x = static_cast<float>(x) / dims.x, f_y = static_cast<float>(y) / dims.y;
+
+	if (is_walk) {
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.walk_radius) {
+			buffer[y * dims.x + x] = cross.color;
+		}
+	}
+	else if (is_run) {
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.run_radius) {
+			buffer[y * dims.x + x] = cross.color;
+		}
 	}
 }

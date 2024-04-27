@@ -17,4 +17,8 @@ BulletWeapon::BulletWeapon(WeaponType w, std::string name, glm::vec3 offset, flo
 	this->fire_delay = fire_delay;
 
 	this->instance_index = instance;
+
+	this->last_fire = glfwGetTime();
+
+	this->crosshair = Crosshair{ 0.1f, 0.15f, glm::vec4(1.0f)};
 }

@@ -8,11 +8,11 @@ struct d_Model;
 class HostModel;
 
 __device__
-const int BVH_TRIANGLE_COUNT = 32;
+const int BVH_TRIANGLE_COUNT = 128;
 
 struct BoundingVolume {
-	uint32_t triangles[BVH_TRIANGLE_COUNT];
-	uint8_t triangle_count;
+	uint32_t* triangles;// [BVH_TRIANGLE_COUNT] ;
+	uint32_t triangle_count;
 	glm::vec3 vertices[2];
 	bool is_base, is_top;
 };

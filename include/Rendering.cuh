@@ -4,6 +4,7 @@
 #include "Helper.cuh"
 #include "Light.h"
 #include "Ray.h"
+#include "Crosshair.h"
 
 __device__
 void transform();
@@ -32,5 +33,8 @@ void calculate_lighting(d_AmbientLight*, d_PointLight*, uint32_t, Ray*, glm::ive
 
 __global__
 void texture_map(Ray*, glm::ivec2, glm::vec4*);
+
+__global__
+void draw_crosshair(glm::ivec2, glm::vec4*, Crosshair, bool, bool);
 
 #endif
