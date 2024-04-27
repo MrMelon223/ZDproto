@@ -864,6 +864,9 @@ void Application::main_loop() {
 	//this->camera->set_position(Runtime::PLAYER_OBJECT->get_position());
 
 	Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")]);
+	Runtime::PLAYER_OBJECT->set_player_state(PlayerState::Idle);
+
+	glfwSetInputMode(this->win, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
 	int frame_count = 0;
 	while (this->loop && !glfwWindowShouldClose(this->win)) {

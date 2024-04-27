@@ -79,10 +79,10 @@ void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Mode
 		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->current_fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
 		cudaDeviceSynchronize();
 	}
-
-	//texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
 	calculate_lighting << < (this->dims.y * this->dims.x) / 128, 128 >> > (amb_light, point_lights, point_lights_size, this->d_ray_matrix[0], this->dims, buffer);
 	cudaDeviceSynchronize();
+
+	//texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
 
 	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Walking || Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Idle) {
 		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), false, true);
@@ -90,6 +90,7 @@ void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Mode
 	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Running) {
 		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), true, false);
 	}
+	cudaDeviceSynchronize();
 }
 
 __global__
@@ -461,21 +462,24 @@ void draw_crosshair(glm::ivec2 dims, glm::vec4* buffer, Crosshair cross, bool is
 		i = blockDim.x * blockIdx.x + threadIdx.x,
 		x = (j * 128 + i) % dims.x,
 		y = ((j * 128 + i) - x) / dims.x;
-	uint32_t idx = y * dims.x + x;
+	int32_t idx = y * dims.x + x;
 
-	x += dims.x / 2;
-	y += dims.y / 2;
+	x -= static_cast<int32_t>(static_cast<float>(dims.x) * 0.5f);
+	y -= static_cast<int32_t>(static_cast<float>(dims.y) * 0.5f);
 
-	float f_x = static_cast<float>(x) / dims.x, f_y = static_cast<float>(y) / dims.y;
+	float f_x = static_cast<float>(x) / static_cast<float>(dims.x), f_y = static_cast<float>(y) / static_cast<float>(dims.y);
 
 	if (is_walk) {
-		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.walk_radius) {
-			buffer[y * dims.x + x] = cross.color;
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.walk_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.93f) {
+			buffer[idx] = glm::vec4(1.0f);
 		}
 	}
 	else if (is_run) {
-		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.run_radius) {
-			buffer[y * dims.x + x] = cross.color;
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.run_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.93f) {
+			buffer[idx] = glm::vec4(1.0f);
 		}
+	}
+	else {
+		buffer[idx] = buffer[idx];
 	}
 }

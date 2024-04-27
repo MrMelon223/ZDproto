@@ -6,6 +6,7 @@
 #include "Ray.h"
 #include "Crosshair.h"
 
+
 __device__
 void transform();
 

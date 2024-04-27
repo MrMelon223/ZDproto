@@ -2,7 +2,7 @@
 #include "../include/Weapon.h"
 
 BulletWeapon::BulletWeapon() {
-
+	this->crosshair = Crosshair{ 0.010f, 0.015f, glm::vec4(1.0f) };
 }
 
 BulletWeapon::BulletWeapon(WeaponType w, std::string name, glm::vec3 offset, float walk, float run, float damage, float fire_delay, uint32_t instance) {
@@ -20,5 +20,5 @@ BulletWeapon::BulletWeapon(WeaponType w, std::string name, glm::vec3 offset, flo
 
 	this->last_fire = glfwGetTime();
 
-	this->crosshair = Crosshair{ 0.1f, 0.15f, glm::vec4(1.0f)};
+	this->crosshair = Crosshair{ 0.010f, 0.015f, glm::vec4(1.0f)};
 }
