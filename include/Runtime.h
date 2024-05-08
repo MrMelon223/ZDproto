@@ -31,6 +31,8 @@ namespace Runtime {
 
 	uint32_t find_weapon_index(std::string);
 
+	bool objects_collide(Object*, Object*);
+
 		// Controls
 	static bool KEY_USED = false;
 	static int CURRENT_KEY = -1;

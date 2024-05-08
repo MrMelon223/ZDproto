@@ -7,6 +7,16 @@
 static void keyboard_callback(GLFWwindow*, int, int, int, int);
 static void mouse_callback(GLFWwindow*, int, int, int);
 
+struct KeyboardButtonUse {
+	int key, scancode, action, mods;
+};
+struct MouseButtonUse {
+	int button, action, mods;
+};
+
+extern std::queue<KeyboardButtonUse> keyboard_button_uses;
+extern std::queue<MouseButtonUse> mouse_button_uses;
+
 class Application {
 protected:
 	glm::ivec2 dims;
@@ -23,8 +33,10 @@ protected:
 
 	sqlite3* database_connection;
 
-	void input_handle();
-	void mouse_handle();
+	void input_handle(KeyboardButtonUse&);
+	void mouse_handle(MouseButtonUse&);
+
+	void empty_input_queues();
 
 public:
 	Application();

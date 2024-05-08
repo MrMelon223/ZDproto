@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <queue>
 #include <unordered_map>
 #include <vector>
 	// Vectors/Matrices

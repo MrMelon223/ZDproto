@@ -17,6 +17,7 @@ union ObjIndexs {
 	uint32_t physics_object_index;
 	uint32_t player_index;
 	uint32_t weapon_index;
+	uint32_t static_index;
 };
 
 enum PlayerState {
@@ -32,6 +33,7 @@ protected:
 	glm::vec3 position;
 	glm::vec3 rotation;
 	glm::vec3 direction;
+	glm::vec3 velocity;
 	float mass_kg;
 
 	ObjectType object_type;
@@ -51,6 +53,8 @@ protected:
 
 	float last_attack;
 	float attack_cooldown;
+
+	float last_time;	// Physics
 		// Player Variable(s)
 	Camera* camera_ptr;
 
@@ -117,6 +121,9 @@ public:
 
 	void set_player_state(PlayerState s) { this->player_state = s; }
 	PlayerState get_player_state() { return this->player_state; }
+
+	void set_velocity(glm::vec3 v) { this->velocity = v; }
+	glm::vec3 get_velocity() { return this->velocity; }
 };
 
 #endif

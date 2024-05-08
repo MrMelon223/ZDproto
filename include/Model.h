@@ -40,6 +40,8 @@ public:
 	d_BVH to_gpu();
 
 	void debug_print();
+
+	std::vector<BVHNode>* get_nodes() { return &this->nodes; }
 };
 
 class HostModel {
@@ -68,6 +70,12 @@ public:
 	std::vector<Tri>* get_triangles() { return &this->triangles; }
 
 	d_Model to_gpu();
+
+	BVH get_bvh() { return this->bvh; }
+
+	BVHNode* get_initial() {
+		return &this->bvh.get_nodes()->back();
+	}
 };
 
 struct d_Model {
