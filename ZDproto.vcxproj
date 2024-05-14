@@ -122,6 +122,7 @@
       <CudaRuntime>Shared</CudaRuntime>
       <FastMath>false</FastMath>
       <SplitCompile>MaxThreads</SplitCompile>
+      <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
     <CudaLink>
       <GPUDebugInfo>true</GPUDebugInfo>
@@ -146,12 +147,13 @@
     </CudaCompile>
     <CudaCompile>
       <MaxRegCount>32</MaxRegCount>
-      <SplitCompile>Default</SplitCompile>
+      <SplitCompile>MaxThreads</SplitCompile>
       <HostDebugInfo>true</HostDebugInfo>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <GenerateRelocatableDeviceCode>false</GenerateRelocatableDeviceCode>
       <CudaRuntime>Shared</CudaRuntime>
       <Keep>true</Keep>
+      <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

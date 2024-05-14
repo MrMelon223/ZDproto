@@ -82,7 +82,7 @@ void HostModel::load_from(std::string path) {
 
 		this->triangles.push_back(Tri{ x, y, z, t_norm * norm_w});
 	}
-	this->color_map = Texture("resources/textures/checkerboard.png");
+	this->material_index = 0;
 
 	in.close();
 }
@@ -101,7 +101,7 @@ HostModel::HostModel(std::string path) {
 d_Model HostModel::to_gpu() {
 	uint32_t v_count = static_cast<uint32_t>(this->vertices.size()), t_count = static_cast<uint32_t>(this->triangles.size());
 
-	d_Model ret{ nullptr, nullptr, this, nullptr, nullptr, nullptr, NULL};
+	d_Model ret{ nullptr, nullptr, this, nullptr, nullptr, 0, NULL};
 
 	error_check(cudaMalloc((void**)&ret.vertices, sizeof(Vertex) * v_count));
 	error_check(cudaMalloc((void**)&ret.triangles, sizeof(Tri) * t_count));
@@ -117,10 +117,8 @@ d_Model HostModel::to_gpu() {
 	error_check(cudaMemcpy(ret.triangle_count, &t_count, sizeof(uint32_t), cudaMemcpyHostToDevice));
 	cudaDeviceSynchronize();
 
-	TextureInstance text = this->color_map.instance_of();
 
-	error_check(cudaMalloc((void**)&ret.color_map, sizeof(TextureInstance)));
-	error_check(cudaMemcpy(ret.color_map, &text, sizeof(TextureInstance), cudaMemcpyHostToDevice));
+	ret.material_index = 0;
 
 	ret.bvh = this->bvh.to_gpu();
 

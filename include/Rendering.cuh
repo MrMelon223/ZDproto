@@ -30,12 +30,18 @@ __global__
 void capture_with_rays(glm::vec3, glm::vec3, float, d_ModelInstance*, uint32_t, Ray*, glm::ivec2, d_Model*);
 
 __global__
-void calculate_lighting(d_AmbientLight*, d_PointLight*, uint32_t, Ray*, glm::ivec2, glm::vec4*);
+void calculate_lighting(d_AmbientLight*, d_PointLight*, d_Material*, uint32_t, Ray*, glm::ivec2, glm::vec4*);
 
 __global__
 void texture_map(Ray*, glm::ivec2, glm::vec4*);
 
 __global__
 void draw_crosshair(glm::ivec2, glm::vec4*, Crosshair, bool, bool);
+
+__global__
+void fxaa_pass(glm::ivec2, glm::vec4*, glm::vec4*);
+
+__global__
+void copy_frame_buffer(glm::ivec2,  glm::vec4*, glm::vec4*);
 
 #endif

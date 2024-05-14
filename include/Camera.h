@@ -4,6 +4,15 @@
 #include "Rendering.cuh"
 #include "Ray.h"
 
+enum PlayerState {
+	WalkF,
+	WalkR,
+	WalkL,
+	WalkB,
+	RunF,
+	Idle
+};
+
 static const uint32_t MAX_BOUNCE_COUNT = 1;
 
 class Camera {
@@ -36,7 +45,7 @@ public:
 
 	glm::ivec2 get_dims() { return this->dims; }
 
-	void capture(d_ModelInstance*, uint32_t, d_Model*, d_AmbientLight*, d_PointLight*, uint32_t, glm::vec4*);
+	void capture(d_ModelInstance*, uint32_t, d_Model*, d_Material*, d_AmbientLight*, d_PointLight*, uint32_t, glm::vec4*, glm::vec4*);
 
 	void new_frame();
 	void cleanup_frame();
@@ -55,6 +64,8 @@ public:
 	glm::vec2 get_current_fov() { return this->current_fov; }
 	void set_current_fov(glm::vec2 f) { this->current_fov = f; }
 	glm::vec2 get_fov() { return this->fov; }
+
+	void update_to(PlayerState);
 };
 
 #endif

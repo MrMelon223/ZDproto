@@ -20,12 +20,6 @@ union ObjIndexs {
 	uint32_t static_index;
 };
 
-enum PlayerState {
-	Walking,
-	Running,
-	Idle
-};
-
 class Object {
 protected:
 	glm::vec3 spawn_point;

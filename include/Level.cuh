@@ -28,6 +28,9 @@ protected:
 	d_PointLight* d_point_lights;
 	uint32_t d_point_lights_count;
 
+	d_Material* d_materials;
+	uint32_t d_materials_count;
+
 	Camera* camera_ptr;
 
 	void load_from(std::string);
@@ -64,6 +67,7 @@ public:
 
 	Object* get_player_object() { return this->PLAYER_OBJECT; }
 
+	d_Material* get_d_materials() { return this->d_materials; }
 
 	//uint32_t get_instance_index(d_ModelInstance);
 

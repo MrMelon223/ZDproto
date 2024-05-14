@@ -33,7 +33,7 @@ void Camera::new_frame() {
 	this->d_ray_matrix = (Ray**)malloc(sizeof(Ray*) * MAX_BOUNCE_COUNT);
 
 	for (uint32_t i = 0; i < MAX_BOUNCE_COUNT; i++) {
-		error_check(cudaMalloc((void**)&this->d_ray_matrix[i], sizeof(Ray) * this->dims.y * this->dims.x));
+		error_check(cudaMalloc((void**)&this->d_ray_matrix[i], sizeof(Ray) * this->dims.y * this->dims.x), "new frame");
 	}
 	cudaDeviceSynchronize();
 }
@@ -41,7 +41,7 @@ void Camera::new_frame() {
 void Camera::cleanup_frame() {
 
 	for (uint32_t i = 0; i < MAX_BOUNCE_COUNT; i++) {
-		error_check(cudaFree(this->d_ray_matrix[i]));
+		error_check(cudaFree(this->d_ray_matrix[i]), "cleanup frame");
 	}
 	free(this->d_ray_matrix);
 }
@@ -49,7 +49,7 @@ void Camera::cleanup_frame() {
 void Camera::copy_to_frame_buffer(glm::vec4* frame_buffer, uint32_t bounce) {
 	Ray* h_ray_matrix = (Ray*)malloc(sizeof(Ray) * this->dims.y * this->dims.x);
 
-	error_check(cudaMemcpy(h_ray_matrix, this->d_ray_matrix[bounce], sizeof(Ray) * this->dims.y * this->dims.x, cudaMemcpyDeviceToHost));
+	error_check(cudaMemcpy(h_ray_matrix, this->d_ray_matrix[bounce], sizeof(Ray) * this->dims.y * this->dims.x, cudaMemcpyDeviceToHost), "copy Ray payloads to frame buffer");
 	cudaDeviceSynchronize();
 
 	for (int y = 0; y < this->dims.y; y++) {
@@ -68,4 +68,25 @@ void Camera::debug_print() {
 	std::cout << std::setw(8) << this->dims.x << "x" << this->dims.y << "p" << std::endl;
 	std::cout << std::setw(15) << "Position: {" << this->position.x << ", " << this->position.y << ", " << this->position.z << " }" << std::endl;
 	std::cout << std::setw(15) << "Direction: {" << this->direction.x << ", " << this->direction.y << ", " << this->direction.z << " }" << std::endl;
+}
+
+void Camera::update_to(PlayerState p) {
+	float delta_t = glfwGetTime() - this->last_time;
+	switch (p) {
+	case PlayerState::WalkF:
+		this->forward(delta_t);
+		break;
+	case PlayerState::WalkR:
+		this->right(delta_t);
+		break;
+	case PlayerState::WalkL:
+		this->left(delta_t);
+		break;
+	case PlayerState::WalkB:
+		this->backward(delta_t);
+		break;
+	case PlayerState::RunF:
+		this->forward(2 * delta_t);
+		break;
+	}
 }

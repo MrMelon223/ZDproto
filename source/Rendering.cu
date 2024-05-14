@@ -71,7 +71,8 @@ glm::vec4 sample_texture(glm::vec4* texture, glm::ivec2 dims, float x, float y) 
 	return glm::vec4(0.0f);
 }
 
-void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, d_AmbientLight* amb_light, d_PointLight* point_lights, uint32_t point_lights_size, glm::vec4* buffer) {
+void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Model* models, d_Material* materials, d_AmbientLight* amb_light, d_PointLight* point_lights, uint32_t point_lights_size, glm::vec4* buffer, glm::vec4* buffer_post) {
+
 	setup_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->current_fov.x, this->d_ray_matrix[0], this->dims);
 	set_visible_tris << < (instance_count / 128) + 1, 128 >> > (this->position, this->direction, this->current_fov, models, instances, instance_count);
 	cudaDeviceSynchronize();
@@ -79,16 +80,26 @@ void Camera::capture(d_ModelInstance* instances, uint32_t instance_count, d_Mode
 		capture_with_rays << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->position, this->direction, this->current_fov.x, instances, instance_count, this->d_ray_matrix[i], this->dims, models);
 		cudaDeviceSynchronize();
 	}
-	calculate_lighting << < (this->dims.y * this->dims.x) / 128, 128 >> > (amb_light, point_lights, point_lights_size, this->d_ray_matrix[0], this->dims, buffer);
+	calculate_lighting << < (this->dims.y * this->dims.x) / 128, 128 >> > (amb_light, point_lights, materials, point_lights_size, this->d_ray_matrix[0], this->dims, buffer);
 	cudaDeviceSynchronize();
+
+	//fxaa_pass << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, buffer_post);
+	//error_check(cudaGetLastError(), "fxaa pass");
+	//cudaDeviceSynchronize();
 
 	//texture_map << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->d_ray_matrix[0], this->dims, buffer);
 
-	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Walking || Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Idle) {
-		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), false, true);
-	}
-	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::Running) {
+	//copy_frame_buffer << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, fin_buffer);
+	//error_check(cudaGetLastError(), "copy_frame_buffer");
+
+
+	if (Runtime::PLAYER_OBJECT->get_player_state() == PlayerState::RunF) {
 		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), true, false);
+		error_check(cudaGetLastError(), "draw_crosshair RUNNING");
+	}
+	else {
+		draw_crosshair << < (this->dims.y * this->dims.x) / 128, 128 >> > (this->dims, buffer, Runtime::PLAYER_OBJECT->get_current_weapon()->get_crosshair(), false, true);
+		error_check(cudaGetLastError(), "draw_crosshair IDLE");
 	}
 	cudaDeviceSynchronize();
 }
@@ -395,7 +406,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 }
 
 __global__
-void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t lights_size, Ray* rays, glm::ivec2 dims, glm::vec4* out) {
+void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, d_Material* materials, uint32_t lights_size, Ray* rays, glm::ivec2 dims, glm::vec4* out) {
 	int j = blockDim.y * blockIdx.y + threadIdx.y,
 		i = blockDim.x * blockIdx.x + threadIdx.x,
 		x = (j * 128 + i) % dims.x,
@@ -407,7 +418,7 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, uint32_t ligh
 	Ray* ray = &rays[idx];
 	if (ray->intersected) {
 		glm::vec3 result = glm::vec3(0.0f);
-		glm::vec4 diffuse_color = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
+		glm::vec4 diffuse_color = sample_texture(materials[ray->payload.model->material_index].color_map.data, materials[ray->payload.model->material_index].color_map.dims, ray->payload.uv.x, ray->payload.uv.y);
 
 		glm::vec4 lighting = glm::vec4(0.0f);
 		bool lit = false;
@@ -449,7 +460,7 @@ void texture_map(Ray* rays, glm::ivec2 dims, glm::vec4* out) {
 
 	Ray* ray = &rays[idx];
 	if (ray->intersected) {
-		out[idx] = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
+		//out[idx] = sample_texture(ray->payload.model->color_map->data, ray->payload.model->color_map->dims, ray->payload.uv.x, ray->payload.uv.y);
 	}
 	else {
 		out[idx] = ray->payload.color;
@@ -470,16 +481,75 @@ void draw_crosshair(glm::ivec2 dims, glm::vec4* buffer, Crosshair cross, bool is
 	float f_x = static_cast<float>(x) / static_cast<float>(dims.x), f_y = static_cast<float>(y) / static_cast<float>(dims.y);
 
 	if (is_walk) {
-		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.walk_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.93f) {
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.walk_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.5f) {
 			buffer[idx] = glm::vec4(1.0f);
 		}
 	}
 	else if (is_run) {
-		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.run_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.93f) {
+		if (sqrtf(f_x * f_x + f_y * f_y) <= cross.run_radius && sqrtf(f_x * f_x + f_y * f_y) > cross.walk_radius * 0.5f) {
 			buffer[idx] = glm::vec4(1.0f);
 		}
 	}
 	else {
 		buffer[idx] = buffer[idx];
+	}
+}
+
+__global__
+void fxaa_pass(glm::ivec2 dims, glm::vec4* buffer, glm::vec4* buffer_out) {
+	int j = blockDim.y * blockIdx.y + threadIdx.y,
+		i = blockDim.x * blockIdx.x + threadIdx.x,
+		x = (j * 128 + i) % dims.x,
+		y = ((j * 128 + i) - x) / dims.x;
+	int32_t idx = y * dims.x + x;
+
+	if (x > 0 && x < dims.x - 1 && y > 0 && y < dims.y - 1) {
+		glm::vec4 pixels[8], current = glm::clamp(buffer[idx], 0.001f, 1.0f);
+		float* out_matrix = new float[8];
+		pixels[0] = buffer[idx - (dims.x) - 1];
+		pixels[1] = buffer[idx - dims.x];
+		pixels[2] = buffer[idx - dims.x + 1];
+
+		pixels[3] = buffer[idx - 1];
+		pixels[4] = buffer[idx + 1];
+
+		pixels[5] = buffer[idx + dims.x - 1];
+		pixels[6] = buffer[idx + dims.x];
+		pixels[7] = buffer[idx + dims.x + 1];
+		
+		float total = 0.0f;
+		for (uint8_t k = 0; k < 8; k++) {
+			pixels[k] = glm::clamp(pixels[k], 0.001f, 1.0f);
+
+			pixels[k] = pixels[k] / current;
+
+			const float comp = 1.089f;
+
+			if (pixels[k].x >= comp || pixels[k].y >= comp || pixels[k].z >= comp) {
+				out_matrix[k] = glm::clamp(glm::dot(pixels[k], current), 0.0f, 1.0f);
+				total += out_matrix[k];
+			}
+			else {
+				out_matrix[k] = 1.0f;
+			}
+		}
+
+		total /= 8.0f;
+
+		//glm::mat3 matrix = glm::mat3(glm::vec3(out_matrix[0], out_matrix[3], out_matrix[5]), glm::vec3(out_matrix[1], 1.0f, out_matrix[7]), glm::vec3(out_matrix[2], out_matrix[4], out_matrix[7]));
+		buffer_out[idx] = glm::clamp(total * buffer[idx], 0.0f, 1.0f);
+	}
+}
+
+__global__
+void copy_frame_buffer(glm::ivec2 dims, glm::vec4* dest, glm::vec4* from) {
+	int j = blockDim.y * blockIdx.y + threadIdx.y,
+		i = blockDim.x * blockIdx.x + threadIdx.x,
+		x = (j * 128 + i) % dims.x,
+		y = ((j * 128 + i) - x) / dims.x;
+	int32_t idx = y * dims.x + x;
+
+	if (x >= 0 && x < dims.x && y >= 0 && y < dims.y) {
+		dest[idx] = from[idx];
 	}
 }

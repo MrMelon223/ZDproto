@@ -51,7 +51,7 @@ protected:
 	std::vector<Vertex> vertices;
 	std::vector<Tri> triangles;
 
-	Texture color_map;
+	uint32_t material_index;
 
 	BVH bvh;
 
@@ -83,7 +83,7 @@ struct d_Model {
 	HostModel* host_ptr;
 	Vertex* vertices;
 	Tri* triangles;
-	TextureInstance* color_map;
+	uint32_t material_index;
 	d_BVH bvh;
 };
 

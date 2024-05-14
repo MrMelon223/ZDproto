@@ -10,6 +10,9 @@
 extern std::vector<HostModel> HOST_MODELS;
 extern std::vector<d_Model> DEVICE_MODELS;
 
+extern std::vector<Material> HOST_MATERIALS;
+extern std::vector<d_Material> DEVICE_MATERIALS;
+
 namespace Runtime {
 	extern Object* PLAYER_OBJECT;
 
@@ -18,6 +21,7 @@ namespace Runtime {
 
 	extern std::vector<d_ModelInstance> model_instances;
 
+	void load_materials(sqlite3*);
 	void runtime_load(sqlite3*);
 	void load_objects(sqlite3*);
 	void load_weapons(sqlite3*);
