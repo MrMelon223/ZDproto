@@ -387,6 +387,10 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 		mass >> mass_kg;
 		w.set_mass_kg(mass_kg);
 
+		std::istringstream fire_delay(p_fields[12]);
+		fire_delay >> f_delay;
+		w.set_fire_delay(f_delay);
+
 		Runtime::WEAPONS.push_back(w);
 		
 	}

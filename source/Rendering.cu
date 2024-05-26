@@ -224,7 +224,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 					bool cont = false;
 					if (n == 0 && !model->bvh.nodes[model->bvh.initial].volume.is_base && model->bvh.node_size > 1) {
 						//printf("BVH initial = %i for size %i\n", model->bvh.initial, model->bvh.node_size);
-						glm::vec3 min = node->volume.vertices[0] + g->position, max = node->volume.vertices[1] + g->position;
+						glm::vec3 min = node->volume.vertices[0] + g->position * scale, max = node->volume.vertices[1] + g->position * scale;
 						int towards = 0;
 						bool vol_intersect = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 
@@ -261,8 +261,8 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 							//printf("Left idx = %i, Right idx = %i\n", node->left_child_index, node->right_child_index);
 							BVHNode* left = &model->bvh.nodes[node->left_child_index],
 								* right = &model->bvh.nodes[node->right_child_index];
-							glm::vec3 min = left->volume.vertices[0] + g->position, max = left->volume.vertices[1] + g->position;
-							glm::vec3 min_right = right->volume.vertices[0] + g->position, max_right = right->volume.vertices[1] + g->position;
+							glm::vec3 min = left->volume.vertices[0] + g->position, max = left->volume.vertices[1] + g->position * scale;
+							glm::vec3 min_right = right->volume.vertices[0] + g->position, max_right = right->volume.vertices[1] + g->position * scale;
 							int towards = 0, towards_right = 0;
 							bool vol_intersect_a = ray_intersects_box(ray->position, ray->direction, min, max, towards);
 							bool vol_intersect_b = ray_intersects_box(ray->position, ray->direction, min_right, max_right, towards_right);
@@ -341,16 +341,16 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 								glm::vec3 rotation_axis = glm::vec3(0.0f, 0.0f, 1.0f);
 								float angle = glm::acos(glm::dot(rotation_axis, rotation_axis));
 								glm::vec3 axis = glm::cross(rotation_axis, dir);
-								glm::mat4 rotation_matrix = glm::rotate(glm::mat4(1.0f), angle, dir);
+								glm::mat4 rotation_matrix_x = glm::rotate(glm::mat4(1.0f), dir.x, glm::vec3(1.0f, 0.0f, 0.0f));
+								glm::mat4 rotation_matrix_y = glm::rotate(glm::mat4(1.0f), dir.y, glm::vec3(0.0f, 1.0f, 0.0f));
+								glm::mat4 rotation_matrix_z = glm::rotate(glm::mat4(1.0f), dir.z, glm::vec3(0.0, 0.0, 1.0f));
 
-								glm::vec4 verta4 = glm::vec4(scale * vs[t->a].position + offset, 1.0f) * rotation_matrix;
+								glm::vec4 verta4 = glm::vec4(scale * vs[t->a].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
 								glm::vec3 verta = glm::vec3(verta4.x, verta4.y, verta4.z);
-								glm::vec4 vertb4 = glm::vec4(scale * vs[t->b].position + offset, 1.0f) * rotation_matrix;
+								glm::vec4 vertb4 = glm::vec4(scale * vs[t->b].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
 								glm::vec3 vertb = glm::vec3(vertb4.x, vertb4.y, vertb4.z);
-								glm::vec4 vertc4 = glm::vec4(scale * vs[t->c].position + offset, 1.0f) * rotation_matrix;
+								glm::vec4 vertc4 = glm::vec4(scale * vs[t->c].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
 								glm::vec3 vertc = glm::vec3(vertc4.x, vertc4.y, vertc4.z);
-
-
 
 								bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, verta, vertb, vertc, uv, d);
 								if (intersection_detection) {
