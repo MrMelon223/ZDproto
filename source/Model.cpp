@@ -26,7 +26,7 @@ std::string extract_name(std::string path) {
 
 void HostModel::load_from(std::string path) {
 	this->filepath = path;
-	this->name = extract_name(this->filepath);
+	//this->name = extract_name(this->filepath);
 
 	std::ifstream in;
 	in.open(this->filepath, std::ios_base::in);
@@ -84,6 +84,9 @@ void HostModel::load_from(std::string path) {
 	}
 	this->material_index = 0;
 
+	std::cout << std::setw(10) << this->vertices.size() << " Vertices loaded" << std::endl;
+	std::cout << std::setw(10) << this->triangles.size() << " Triangles loaded" << std::endl;
+
 	in.close();
 }
 
@@ -91,8 +94,9 @@ HostModel::HostModel() {
 
 }
 
-HostModel::HostModel(std::string path) {
+HostModel::HostModel(std::string path, std::string name) {
 	this->load_from(path);
+	this->name = name;
 
 	this->bvh = BVH(this);
 	//this->bvh.debug_print();

@@ -35,6 +35,8 @@ namespace Runtime {
 
 	uint32_t find_weapon_index(std::string);
 
+	uint32_t find_material_index(std::string);
+
 	bool objects_collide(Object*, Object*);
 
 		// Controls

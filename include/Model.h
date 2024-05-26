@@ -59,7 +59,7 @@ protected:
 
 public:
 	HostModel();
-	HostModel(std::string);
+	HostModel(std::string, std::string);
 
 	std::string get_filepath() { return this->filepath; }
 	std::string get_name() { return this->name; }

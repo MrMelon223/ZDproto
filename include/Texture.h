@@ -61,6 +61,8 @@ public:
 	Material(std::string, std::string);
 
 	d_Material to_gpu();
+
+	std::string get_name() { return this->name; }
 };
 
 

@@ -13,7 +13,7 @@ glm::vec4 interpolateColor3D(const glm::vec4& c1, const glm::vec4& c2, const glm
 }
 
 __device__
-glm::vec3 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0, const glm::vec2& vertex1, const glm::vec2& vertex2) {
+glm::vec2 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0, const glm::vec2& vertex1, const glm::vec2& vertex2) {
 	glm::vec2 v0 = vertex1 - vertex0;
 	glm::vec2 v1 = vertex2 - vertex0;
 	glm::vec2 v2 = point - vertex0;
@@ -24,12 +24,17 @@ glm::vec3 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0,
 	float dot11 = glm::dot(v1, v1);
 	float dot12 = glm::dot(v1, v2);
 
+	float u = point.x;
+	float v = point.y;
+	float w = 1.0 - (u + v);
+
 	float denom = dot00 * dot11 - dot01 * dot01;
 	float barycentricY = (dot11 * dot02 - dot01 * dot12) / denom;
 	float barycentricZ = (dot00 * dot12 - dot01 * dot02) / denom;
 	float barycentricX = 1.0f - barycentricY - barycentricZ;
 
-	return glm::vec3(barycentricX, barycentricY, barycentricZ);
+	return glm::vec2(vertex0.x * u + vertex1.x * v + vertex2.x * w,
+		vertex0.y * u + vertex1.y * v + vertex2.y * w);
 }
 
 __device__
@@ -362,15 +367,20 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 										glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
 										glm::mat3 a_inv = glm::inverse(a);
-										glm::vec3 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
+										glm::vec2 barycentric = glm::normalize(calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv));
+
+										glm::vec2 uv_avg = (vs[t->a].uv + vs[t->b].uv + vs[t->c].uv) / 3.0f;
 
 										//printf("Barycentric Coords: {%.2f, %.2f, %.2f}\n", barycentric.x, barycentric.y, barycentric.z);
 
 										//uv = (barycentric.x * vs[t->a].uv + barycentric.y * vs[t->b].uv + barycentric.z * vs[t->c].uv) * uv;
-										uv = uv;
-										//uv = glm::vec2(barycentric.x, barycentric.y);
+										uv = barycentric;
 
+										//uv = glm::vec2(barycentric.x, barycentric.y);
+										//uv = glm::vec2(barycentric.x, barycentric.y);
 										//uv /= 10.0f;
+										//uv = glm::vec2(barycentric.x, barycentric.y);
+										//uv = uv * vs[t->a].uv + uv * vs[t->b].uv + uv * vs[t->c].uv;
 
 										uv = glm::clamp(uv, 0.0f, 1.0f);
 

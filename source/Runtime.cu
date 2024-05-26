@@ -48,7 +48,7 @@ int sql_callback(void* p_data, int num_fields, char** p_fields, char** p_col_nam
 	try {
 		std::cout << "Fields: " << num_fields << std::endl;
 		std::cout << "     Loading Asset " << p_fields[0] << std::endl;
-		HOST_MODELS.push_back(HostModel(std::string(p_fields[0])));
+		HOST_MODELS.push_back(HostModel(std::string(p_fields[0]), std::string(p_fields[1])));
 		DEVICE_MODELS.push_back(HOST_MODELS.back().to_gpu());
 	}
 	catch (...) {
@@ -61,7 +61,7 @@ int sql_callback(void* p_data, int num_fields, char** p_fields, char** p_col_nam
 void Runtime::runtime_load(sqlite3* sql) {
 	std::string filepath = "resources/models.txt";
 
-	const char* command = "SELECT path FROM assets;";
+	const char* command = "SELECT * FROM assets;";
 	char* err;
 
 	HOST_MODELS = *new std::vector<HostModel>();
@@ -966,7 +966,7 @@ Object::Object(ObjectType type, ObjIndexs idxs, std::string name, glm::vec3 posi
 void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance, Camera* cam, float t, GLFWwindow* win, Object* player) {
 	//std::cout << "updating object" << std::endl;
 	float to_player, time;
-	if ((this->object_type == ObjectType::Physics || this->object_type == ObjectType::AI || this->object_type == ObjectType::Player) && (this->object_type != ObjectType::Static && this->object_type != ObjectType::Weapon)) {
+	if ((this->object_type == ObjectType::Physics || this->object_type == ObjectType::AI) && (this->object_type != ObjectType::Static && this->object_type != ObjectType::Weapon)) {
 		float delta_time = this->last_time - time;
 
 		//this->velocity = glm::vec3(0.0f);
@@ -992,7 +992,7 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 
 		bool collide = false;
 
-		//this->position += this->velocity * delta_time;	// Commented out
+		this->position += this->velocity * delta_time;	// Commented out
 		instances[this->instance_index].position = this->position;
 		//instances[this->instance_index].rotation = this->direction;
 		instances[this->hitbox_instance_index].position = this->position;
@@ -1096,4 +1096,15 @@ uint32_t Runtime::find_host_model_index(std::string name) {
 		}
 	}
 	return 0;
+}
+
+uint32_t Runtime::find_material_index(std::string mat) {
+	uint32_t count = 0;
+	for (Material m : HOST_MATERIALS) {
+		if (mat == m.get_name()) {
+			return count;
+		}
+		count++;
+	}
+	return 0;	// FIX THIS EVENTUALLY!
 }
