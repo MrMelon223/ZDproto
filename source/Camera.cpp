@@ -22,6 +22,7 @@ Camera::Camera(glm::ivec2 dims, float fov, glm::vec3 position, glm::vec3 euler_d
 	this->direction.z = sinf(yaw) * cosf(pitch);
 
 	this->direction = glm::normalize(this->direction);
+	this->position = position;
 }
 
 void Camera::debug_show_render_data() {

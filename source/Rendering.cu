@@ -367,7 +367,7 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 										glm::mat3 a = glm::mat3(glm::vec3(vs[t->a].uv, 1.0f), glm::vec3(vs[t->b].uv, 1.0f), glm::vec3(vs[t->c].uv, 1.0f));
 
 										glm::mat3 a_inv = glm::inverse(a);
-										glm::vec2 barycentric = glm::normalize(calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv));
+										glm::vec2 barycentric = calculateBarycentric(uv, vs[t->a].uv, vs[t->b].uv, vs[t->c].uv);
 
 										glm::vec2 uv_avg = (vs[t->a].uv + vs[t->b].uv + vs[t->c].uv) / 3.0f;
 

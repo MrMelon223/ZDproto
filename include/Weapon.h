@@ -28,6 +28,8 @@ protected:
 
 	float last_fire;
 
+	float mass_kg;
+
 	Crosshair crosshair;
 
 public:
@@ -59,6 +61,9 @@ public:
 
 	float get_last_fire() { return this->last_fire; }
 	void set_last_fire(float f) { this->last_fire = f; }
+
+	void set_mass_kg(float m) { this->mass_kg = m; }
+	float get_mass_kg() { return this->mass_kg; }
 
 	Crosshair get_crosshair() { return this->crosshair; }
 

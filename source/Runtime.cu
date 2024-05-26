@@ -317,121 +317,77 @@ int sql_callback_weapon(void* p_data, int num_fields, char** p_fields, char** p_
 {
 	try {
 		std::cout << "	Weapons:" << std::endl;
-		for (size_t h = 0; h < (num_fields / 12); h++) {
-			BulletWeapon w = BulletWeapon();
 
-				for (size_t i = 0; i < 12; i++) {
-					char* str = p_fields[h * 12 + i];
-					std::istringstream in(str);
+		int wpn_type = -1;
+		WeaponType type;
 
-					int wpn_type = -1;
-					WeaponType type;
+		float w_speed = 0.0f;
+		float r_speed = 0.0f;
+		int32_t b_dmg = 0;
+		float d_range = 0.0f;
+		float f_delay = 0.01f;
+		float mass_kg;
+		std::string model_name;
 
-					float w_speed = 0.0f;
-					float r_speed = 0.0f;
-					int32_t b_dmg = 0;
-					float d_range = 0.0f;
-					float f_delay = 0.01f;
-					float mass_kg;
-					std::string model_name;
+		uint32_t model_index = 0;
+		d_ModelInstance d_m;
+		uint32_t inst_idx = 0;
 
-					uint32_t model_index = 0;
-					d_ModelInstance d_m;
-					uint32_t inst_idx = 0;
+		BulletWeapon w = BulletWeapon();
+		w.set_name(std::string(p_fields[0]));
 
-					switch (i) {
-					case 0:
-						w.set_name(str);
-						break;
-					case 1:
-						in >> wpn_type;
-
-						type = WeaponType::SemiAutomatic;
-						if (wpn_type == 0) {
-							type = WeaponType::SemiAutomatic;
-						}
-						else if (wpn_type == 1) {
-							type = WeaponType::FullyAutomatic;
-						}
-						else if (wpn_type == 2) {
-							type = WeaponType::Burst;
-						}
-						else if (wpn_type == 3) {
-							type = WeaponType::BoltAction;
-						}
-						else if (wpn_type == 4) {
-							type = WeaponType::SingleShot;
-						}
-						else if (wpn_type == 5) {
-							type = WeaponType::Melee;
-						}
-
-						w.set_weapon_type(type);
-
-						break;
-					case 2:
-						in >> model_name;
-
-						model_index = Runtime::find_host_model_index(model_name);
-
-						d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 1.0f);
-						Runtime::model_instances.push_back(d_m);
-
-						inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-
-						w.set_instance_index(inst_idx);
-						break;
-					case 3:
-						in >> model_name;
-
-						model_index = Runtime::find_host_model_index(model_name);
-
-						d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 1.0f);
-						Runtime::model_instances.push_back(d_m);
-
-						inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
-
-						//w.set_instance_index(inst_idx);
-						break;
-					case 4:
-						in >> b_dmg;
-
-						w.set_base_damage(static_cast<float>(b_dmg));
-
-						break;
-					case 5:
-						in >> d_range;
-						
-						// Set weapon range
-
-						break;
-					case 6:
-
-						break;
-					case 7:
-						
-						break;
-					case 8:
-
-						break;
-					case 9:
-
-						break;
-					case 10:
-
-						break;
-					case 11:
-						in >> mass_kg;
-
-						//w.set_mass(mass_kg);
-
-						break;
-					}
-					std::cout << str << std::endl;
-				}
-
-			Runtime::WEAPONS.push_back(w);
+		type = WeaponType::SemiAutomatic;
+		if (wpn_type == 0) {
+			type = WeaponType::SemiAutomatic;
 		}
+		else if (wpn_type == 1) {
+			type = WeaponType::FullyAutomatic;
+		}
+		else if (wpn_type == 2) {
+			type = WeaponType::Burst;
+		}
+		else if (wpn_type == 3) {
+			type = WeaponType::BoltAction;
+		}
+		else if (wpn_type == 4) {
+			type = WeaponType::SingleShot;
+		}
+		else if (wpn_type == 5) {
+			type = WeaponType::Melee;
+		}
+
+		w.set_weapon_type(type);
+		
+		model_index = Runtime::find_host_model_index(p_fields[2]);
+
+		d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 1.0f);
+		Runtime::model_instances.push_back(d_m);
+
+		inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+
+		w.set_instance_index(inst_idx);
+
+		model_index = Runtime::find_host_model_index(p_fields[3]);
+
+		d_m = create_instance(model_index, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), Runtime::find_host_model(model_name)->get_triangle_count(), false, 1.0f);
+		Runtime::model_instances.push_back(d_m);
+
+		inst_idx = static_cast<uint32_t>(Runtime::model_instances.size() - 1);
+			// Set Third Person Model TO DO...
+
+		std::istringstream dmg(p_fields[4]);
+		dmg >> b_dmg;
+		w.set_base_damage(b_dmg);
+
+		std::istringstream range(p_fields[5]);
+		range >> d_range;
+		w.set_base_damage(d_range);
+
+		std::istringstream mass(p_fields[11]);
+		mass >> mass_kg;
+		w.set_mass_kg(mass_kg);
+
+		Runtime::WEAPONS.push_back(w);
 		
 	}
 	catch (...) {
