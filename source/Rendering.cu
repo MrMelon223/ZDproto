@@ -442,7 +442,7 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, d_Material* m
 			float distance = glm::length(light_direction);
 			if (distance <= lights[l].range) {
 				float diff = glm::dot(ray->payload.triangle->normal, light_direction);
-				if (diff >= 0.0f) {
+				if (diff <= 0.0f) {
 					float intensity = lights[l].intensity / (distance * distance);
 					glm::vec3 diffuse = intensity * glm::vec3(lights[l].diffuse_color.x, lights[l].diffuse_color.y, lights[l].diffuse_color.z);
 

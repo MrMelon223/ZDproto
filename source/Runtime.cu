@@ -962,7 +962,8 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 		this->velocity = glm::vec3(0.0f);
 		//std::cout << "	updating as AI" << std::endl;
 		this->target_position = Runtime::PLAYER_OBJECT->get_position();
-		this->direction = glm::normalize(this->target_position - this->position);
+		glm::vec3 to_tar = glm::normalize(this->target_position - this->position);
+		this->direction = glm::vec3(to_tar.x, 0.0f, 0.0f);
 		this->position += this->direction * t * 5.0f;
 		instances->position = this->position;
 		instances->rotation = this->direction;
@@ -1020,12 +1021,7 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 
 		d_wpn->position = this->position + this->primary->get_offset();
 		glm::vec3 w_dir = cam->get_direction();
-		if (w_dir.x <= 0.0f) {
-			d_wpn->rotation = glm::vec3(-w_dir.y, w_dir.x, 0.0f);
-		}
-		else {
-			d_wpn->rotation = glm::vec3(w_dir.y, -w_dir.x, 0.0f);
-		}
+		d_wpn->rotation = cam->get_direction();
 		instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
 		Runtime::PLAYER_OBJECT = this;
 	}
