@@ -341,15 +341,15 @@ void capture_with_rays(glm::vec3 position, glm::vec3 direction, float horizontal
 								glm::vec3 rotation_axis = glm::vec3(0.0f, 0.0f, 1.0f);
 								float angle = glm::acos(glm::dot(rotation_axis, rotation_axis));
 								glm::vec3 axis = glm::cross(rotation_axis, dir);
-								glm::mat4 rotation_matrix_x = glm::rotate(glm::mat4(1.0f), dir.x, glm::vec3(1.0f, 0.0f, 0.0f));
-								glm::mat4 rotation_matrix_y = glm::rotate(glm::mat4(1.0f), dir.y, glm::vec3(0.0f, 1.0f, 0.0f));
+								glm::mat4 rotation_matrix_x = glm::rotate(glm::mat4(1.0f), dir.y, glm::vec3(1.0f, 0.0f, 0.0f));
+								glm::mat4 rotation_matrix_y = glm::rotate(glm::mat4(1.0f), dir.x, glm::vec3(0.0f, 1.0f, 0.0f));
 								glm::mat4 rotation_matrix_z = glm::rotate(glm::mat4(1.0f), dir.z, glm::vec3(0.0, 0.0, 1.0f));
 
-								glm::vec4 verta4 = glm::vec4(scale * vs[t->a].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
+								glm::vec4 verta4 = glm::vec4(scale * vs[t->a].position, 1.0f) * rotation_matrix_x * rotation_matrix_y + glm::vec4(offset, 0.0f);
 								glm::vec3 verta = glm::vec3(verta4.x, verta4.y, verta4.z);
-								glm::vec4 vertb4 = glm::vec4(scale * vs[t->b].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
+								glm::vec4 vertb4 = glm::vec4(scale * vs[t->b].position, 1.0f) * rotation_matrix_x * rotation_matrix_y + glm::vec4(offset, 0.0f);
 								glm::vec3 vertb = glm::vec3(vertb4.x, vertb4.y, vertb4.z);
-								glm::vec4 vertc4 = glm::vec4(scale * vs[t->c].position, 1.0f) * rotation_matrix_x * rotation_matrix_y * rotation_matrix_z + glm::vec4(offset, 0.0f);
+								glm::vec4 vertc4 = glm::vec4(scale * vs[t->c].position, 1.0f) * rotation_matrix_x * rotation_matrix_y + glm::vec4(offset, 0.0f);
 								glm::vec3 vertc = glm::vec3(vertc4.x, vertc4.y, vertc4.z);
 
 								bool intersection_detection = glm::intersectRayTriangle(ray->position, ray->direction, verta, vertb, vertc, uv, d);
@@ -433,21 +433,23 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, d_Material* m
 		glm::vec4 lighting = glm::vec4(0.0f);
 		bool lit = false;
 		float cummulative_intensity = 0.0f;
+		float amb_strength = 1.0f;
+		glm::vec3 ambient = amb->intensity * amb->diffuse_color * amb_strength;
+		result += ambient;
 		//printf("Light Count = %i\n", static_cast<int>(lights_size));
 		for (int l = 0; l < static_cast<int>(lights_size); l++) {
-
-			float amb_strength = 1.0f;
-			glm::vec3 ambient = amb->intensity * amb->diffuse_color * amb_strength;
 			glm::vec3 light_direction = lights[l].position - ray->payload.intersection;
 			float distance = glm::length(light_direction);
 			if (distance <= lights[l].range) {
-				float diff = glm::max(glm::dot(ray->payload.triangle->normal, light_direction), 0.0f);
-				float intensity = lights[l].intensity / (distance * distance);
-				glm::vec3 diffuse = intensity * lights[l].diffuse_color * diff;
+				float diff = glm::dot(ray->payload.triangle->normal, light_direction);
+				if (diff >= 0.0f) {
+					float intensity = lights[l].intensity / (distance * distance);
+					glm::vec3 diffuse = intensity * glm::vec3(lights[l].diffuse_color.x, lights[l].diffuse_color.y, lights[l].diffuse_color.z);
 
-				result += (ambient + diffuse) + diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
+					result += diffuse + (diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z));
 
-				cummulative_intensity += intensity;
+					cummulative_intensity += intensity;
+				}
 			}
 
 		}

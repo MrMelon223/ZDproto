@@ -1006,13 +1006,26 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 		hitbox_instance->position = this->position;
 		hitbox_instance->rotation = this->direction;
 
-		Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")].set_offset(glm::vec3(0.025f, 0.0f, 0.025f));
-		Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[Runtime::find_weapon_index("Default Weapon")]);
+		uint32_t wpn_idx = Runtime::find_weapon_index("Default Weapon");
+
+		Runtime::WEAPONS[wpn_idx].set_offset(glm::vec3(0.0f, -0.025f, 0.0f));
+		Runtime::PLAYER_OBJECT->set_primary_weapon(&Runtime::WEAPONS[wpn_idx]);
 
 		d_ModelInstance* d_wpn = &Runtime::model_instances[Runtime::PLAYER_OBJECT->get_current_weapon()->get_instance_index()];
 		d_wpn->scale = 0.01f;
+
+		glm::mat4 w_pos_mat_x = glm::rotate(glm::mat4(1.0f), glm::degrees(this->direction.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		glm::mat4 w_pos_mat_y = glm::rotate(glm::mat4(1.0f), glm::degrees(this->direction.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec4 w_pos = glm::vec4(this->position, 1.0f) * w_pos_mat_y;
+
 		d_wpn->position = this->position + this->primary->get_offset();
-		d_wpn->rotation = cam->get_direction();
+		glm::vec3 w_dir = cam->get_direction();
+		if (w_dir.x <= 0.0f) {
+			d_wpn->rotation = glm::vec3(-w_dir.y, w_dir.x, 0.0f);
+		}
+		else {
+			d_wpn->rotation = glm::vec3(w_dir.y, -w_dir.x, 0.0f);
+		}
 		instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
 		Runtime::PLAYER_OBJECT = this;
 	}
