@@ -522,10 +522,10 @@ void Level::load_from(std::string path) {
 		std::getline(in, line);
 		std::istringstream in_obj(line);
 		uint32_t type = 0;
-		float x, y, z, x_d, y_d, z_d, scale;
+		float x2, y2, z2, x_d, y_d, z_d, scale;
 		std::string visual_model, rigid_model;
 
-		in_obj >> x >> y >> z >> x_d >> y_d >> z_d >> scale >> visual_model;
+		in_obj >> x2 >> y2 >> z2 >> x_d >> y_d >> z_d >> scale >> visual_model;
 
 		ObjectType obj_type = ObjectType::AI;
 		//std::cout << "Type " << type << std::endl;
@@ -534,13 +534,13 @@ void Level::load_from(std::string path) {
 		uint32_t model_idx = 0, instance_idx = 0, hitbox_index = 0;
 
 		this->objects.push_back(Runtime::OBJECTS[Runtime::find_object_index(visual_model)]);
-		this->objects.back().set_position(glm::vec3(x, y, z));
+		this->objects.back().set_position(glm::vec3(x2, y2, z2));
 		this->objects.back().set_direction(glm::vec3(x_d, y_d, z_d));
 
 		this->add_model_instance(create_instance(this->objects.back().get_model_index(), this->objects.back().get_position(), this->objects.back().get_direction(), HOST_MODELS[this->objects.back().get_model_index()].get_triangle_count(), false, scale));
 		Runtime::model_instances[this->objects.back().get_hitbox_instance_index()].scale = scale;
 		this->objects.back().set_instance_index(static_cast<uint32_t>(Runtime::model_instances.size() - 1));
-		this->objects.back().set_spawn_point(glm::vec3(x, y, z));
+		this->objects.back().set_spawn_point(glm::vec3(x2, y2, z2));
 
 		if (this->objects.back().get_object_type() == ObjectType::Player) {
 			this->objects.back().attach_camera(this->camera_ptr);
@@ -833,6 +833,11 @@ void Application::main_loop() {
 		Object* obj = this->level->get_objects_ptr();
 		//std::cout << "Updating " << this->level->get_object_count() << " objects in world!" << std::endl;
 		
+		double x, y;
+		glfwGetCursorPos(this->win, &x, &y);
+		this->camera->add_to_euler_direction(glm::vec2(static_cast<float>(x), static_cast<float>(y)));
+		glfwSetCursorPos(this->win, static_cast<double>(this->camera->get_dims().x) / 2.0f, static_cast<double>(this->camera->get_dims().y) / 2.0f);
+
 		this->empty_input_queues();
 		camera->update_to(Runtime::PLAYER_OBJECT->get_player_state());
 
@@ -963,7 +968,8 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 		//std::cout << "	updating as AI" << std::endl;
 		this->target_position = Runtime::PLAYER_OBJECT->get_position();
 		glm::vec3 to_tar = glm::normalize(this->target_position - this->position);
-		this->direction = glm::vec3(to_tar.x, 0.0f, 0.0f);
+		this->direction = to_tar;
+		this->rotation = glm::vec3(0.0f, to_tar.x, 0.0f);
 		this->position += this->direction * t * 5.0f;
 		instances->position = this->position;
 		instances->rotation = this->direction;
@@ -1021,8 +1027,10 @@ void Object::update(d_ModelInstance* instances, d_ModelInstance* hitbox_instance
 
 		d_wpn->position = this->position + this->primary->get_offset();
 		glm::vec3 w_dir = cam->get_direction();
-		d_wpn->rotation = cam->get_direction();
-		instances[this->primary->get_instance_index()].position = this->position + this->primary->get_offset();
+		d_wpn->rotation = w_dir;
+
+		instances[Runtime::PLAYER_OBJECT->get_current_weapon()->get_instance_index()].position = this->position + this->primary->get_offset();
+		instances[Runtime::PLAYER_OBJECT->get_current_weapon()->get_instance_index()].rotation = d_wpn->rotation;
 		Runtime::PLAYER_OBJECT = this;
 	}
 

@@ -3,6 +3,18 @@
 #include "../include/Camera.h"
 #include "../include/Runtime.h"
 
+void setup_rays_api(glm::vec3 position, glm::vec3 direction, float horizontal_fov, Ray* rays, glm::ivec2 dims) {
+	setup_rays << <(dims.y * dims.x) / 128, 128 >> > (position, direction, horizontal_fov, rays, dims);
+}
+
+void capture_with_rays_api(glm::vec3 position, glm::vec3 direction, float horizontal_fov, d_ModelInstance* instances, uint32_t instance_count, Ray* rays, glm::ivec2 dims, d_Model* models) {
+	capture_with_rays << <(dims.y * dims.x) / 128, 128 >> > (position, direction, horizontal_fov, instances, instance_count, rays, dims, models);
+}
+
+void calculate_lighting_api(d_AmbientLight* amb, d_PointLight* lights, d_Material* materials, uint32_t lights_size, Ray* rays, glm::ivec2 dims, glm::vec4* out) {
+	calculate_lighting << <(dims.y * dims.x) / 128, 128 >> > (amb, lights, materials, lights_size, rays, dims, out);
+}
+
 __device__
 glm::vec4 interpolateColor3D(const glm::vec4& c1, const glm::vec4& c2, const glm::vec4& c3,
 	float alpha, float beta, float gamma) {
@@ -29,9 +41,9 @@ glm::vec2 calculateBarycentric(const glm::vec2& point, const glm::vec2& vertex0,
 	float w = 1.0 - (u + v);
 
 	float denom = dot00 * dot11 - dot01 * dot01;
-	float barycentricY = (dot11 * dot02 - dot01 * dot12) / denom;
-	float barycentricZ = (dot00 * dot12 - dot01 * dot02) / denom;
-	float barycentricX = 1.0f - barycentricY - barycentricZ;
+	float barycentricX = (dot11 * dot02 - dot01 * dot12) / denom;
+	float barycentricY = (dot00 * dot12 - dot01 * dot02) / denom;
+	float barycentricZ = 1.0f - barycentricY - barycentricX;
 
 	return glm::vec2(vertex0.x * u + vertex1.x * v + vertex2.x * w,
 		vertex0.y * u + vertex1.y * v + vertex2.y * w);
@@ -446,14 +458,14 @@ void calculate_lighting(d_AmbientLight* amb, d_PointLight* lights, d_Material* m
 					float intensity = lights[l].intensity / (distance * distance);
 					glm::vec3 diffuse = intensity * glm::vec3(lights[l].diffuse_color.x, lights[l].diffuse_color.y, lights[l].diffuse_color.z);
 
-					result += diffuse + (diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z));
+					result += diffuse;// +(diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z));
 
 					cummulative_intensity += intensity;
 				}
 			}
 
 		}
-
+		result += cummulative_intensity * diffuse_color.w * glm::vec3(diffuse_color.x, diffuse_color.y, diffuse_color.z);
 		out[idx] = glm::vec4(result, 1.0f);
 		out[idx] = glm::clamp(out[idx], 0.0f, 1.0f);
 	}

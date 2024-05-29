@@ -1,11 +1,22 @@
 #ifndef RENDERING_CUH
 #define RENDERING_CUH
 
+#ifdef ZD_RENDERING_EXPORTS
+#define ZD_RENDERING_API __declspec(dllexport)
+#else
+#define ZD_RENDERING_API __declspec(dllimport)
+#endif
+
 #include "Helper.cuh"
 #include "Light.h"
 #include "Ray.h"
 #include "Crosshair.h"
 
+extern "C" ZD_RENDERING_API void setup_rays_api(glm::vec3, glm::vec3, float, Ray*, glm::ivec2);
+
+extern "C" ZD_RENDERING_API void capture_with_rays_api(glm::vec3, glm::vec3, float, d_ModelInstance*, uint32_t, Ray*, glm::ivec2, d_Model*);
+
+extern "C" ZD_RENDERING_API void calculate_lighting_api(d_AmbientLight*, d_PointLight*, d_Material*, uint32_t, Ray*, glm::ivec2, glm::vec4*);
 
 __device__
 void transform();
